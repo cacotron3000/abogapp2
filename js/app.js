@@ -26,15 +26,15 @@ let isPushingToDb = false;
 const AUTO_SYNC_DELAY_MS = 900;
 function showSyncMessage(message, isError = false){
   clearTimeout(syncMessageTimer);
-  const subtitle = $('#viewSubtitle');
-  if(!subtitle) return;
-  const prev = subtitle.dataset.prevText || subtitle.textContent;
-  subtitle.dataset.prevText = prev;
-  subtitle.textContent = message;
-  subtitle.style.color = isError ? '#b42318' : '#067647';
+  const status = $('#syncStatus');
+  if(!status) return;
+  const prev = status.dataset.prevText || status.textContent;
+  status.dataset.prevText = prev;
+  status.textContent = `Sincronización: ${message}`;
+  status.style.color = isError ? '#f04438' : '#53b1fd';
   syncMessageTimer = setTimeout(() => {
-    subtitle.textContent = subtitle.dataset.prevText || subtitle.textContent;
-    subtitle.style.color = '';
+    status.textContent = status.dataset.prevText || status.textContent;
+    status.style.color = '';
   }, 3500);
 }
 async function apiSync(action, payload = {}){
@@ -859,19 +859,6 @@ function renderUsuarios(){
 }
 
 ['clienteSearch','asuntoSearch','causaSearch'].forEach(id => document.addEventListener('input', e => { if(e.target.id===id) renderAll(); }));
-
-$('#seedBtn').addEventListener('click', () => {
-  const u1 = state.users[1]?.id || state.users[0].id;
-  const c1 = {id:crypto.randomUUID(),tipo:'Persona natural',nombre:'Juan Pérez Soto',rut:'12.345.678-9',correo:'juan@email.com',telefono:'+56 9 1111 1111',comuna:'La Serena',region:'Coquimbo',estado:'Activo',observaciones:'Cliente laboral'};
-  const c2 = {id:crypto.randomUUID(),tipo:'Empresa',nombre:'Empresa Norte SpA',rut:'76.123.456-7',correo:'contacto@empresa.cl',telefono:'+56 51 222 2222',comuna:'Coquimbo',region:'Coquimbo',estado:'Activo',observaciones:'Cliente empresa'};
-  const a1 = {id:crypto.randomUUID(),clienteId:c1.id,nombre:'Demanda por despido injustificado',tipo:'Judicial',area:'Laboral',materia:'Despido injustificado y nulidad',prioridad:'Alta',estado:'Activo',responsableIds:[u1],responsableId:u1,observaciones:'Preparar audiencia',fechaIngreso:todayISO()};
-  const a2 = {id:crypto.randomUUID(),clienteId:c2.id,nombre:'Revisión de contratos laborales',tipo:'Extrajudicial',area:'Laboral',materia:'Asesoría preventiva',prioridad:'Media',estado:'En análisis',responsableIds:[u1],responsableId:u1,observaciones:'Revisión documental',fechaIngreso:todayISO()};
-  state.clientes.push(c1,c2); state.asuntos.push(a1,a2);
-  state.causas.push({id:crypto.randomUUID(),asuntoId:a1.id,tribunal:'Juzgado de Letras del Trabajo de La Serena',rit:'O-123-2026',rol:'',caratula:'Pérez con Empresa Norte SpA',estadoProcesal:'Audiencia preparatoria pendiente',etapa:'Discusión',proximaAudiencia:'2026-05-15',link:'',ultimaActuacion:todayISO()});
-  state.tareas.push({id:crypto.randomUUID(),asuntoId:a1.id,titulo:'Preparar minuta de audiencia',responsableIds:[u1],responsableId:u1,vencimiento:'2026-05-05',prioridad:'Alta',estado:'Pendiente',descripcion:'Revisar carta de despido, cotizaciones y liquidaciones.'});
-  state.plazos.push({id:crypto.randomUUID(),asuntoId:a1.id,nombre:'Acompañar documentos',inicio:todayISO(),vencimiento:'2026-05-06',tipoDias:'Judiciales',responsableIds:[u1],responsableId:u1,estado:'Vigente',observaciones:'Verificar antes de presentar.'});
-  log('Cargó datos demo'); renderAll();
-});
 
 $('#exportBtn').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
