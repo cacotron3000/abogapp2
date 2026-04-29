@@ -2,10 +2,19 @@
   const API_BASE = localStorage.getItem('sync_api_base') || '/backend/api.php';
   const API_KEY = localStorage.getItem('sync_api_key') || 'dYNcXEgHBE7InHUJUknl6CF28zIlQJt8';
 
-  async function req(action, table=null, method='GET', body=null){
-    const u = new URL(API_BASE, window.location.origin);
+  function buildApiUrl(action, table){
+    let u;
+    try {
+      u = new URL(API_BASE, window.location.href);
+    } catch (_e) {
+      u = new URL('/backend/api.php', window.location.origin);
+    }
     u.searchParams.set('action', action);
-    if(table) u.searchParams.set('table', table);
+    return u;
+  }
+
+  async function req(action, table=null, method='GET', body=null){
+    const u = buildApiUrl(action, table);
     const res = await fetch(u.toString(), {
       method,
       headers: { 'Content-Type':'application/json', 'x-api-key': API_KEY },
