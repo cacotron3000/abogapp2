@@ -45,4 +45,7 @@ El backend crea tablas separadas por sección usando `table_prefix`:
 - `${table_prefix}_logs`
 - `${table_prefix}_meta` (sesión)
 
-Cada registro se guarda por `id` y `payload` JSON, permitiendo persistencia por tabla para cada módulo de la app.
+Cada registro se guarda por `id` y `payload` JSON en los módulos funcionales; la tabla de usuarios usa columnas estructuradas.
+
+En `abogapp_users` se usan columnas estructuradas:
+`id`, `email`, `nombre`, `telefono`, `role`, `password_hash`, `is_admin`, `active`, `created_at`, `updated_at`.

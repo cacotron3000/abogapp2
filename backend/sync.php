@@ -36,8 +36,15 @@ function ensureTables(PDO $pdo, string $prefix): array {
     $tables['users'] = 'abogapp_users';
     $pdo->exec("CREATE TABLE IF NOT EXISTS `abogapp_users` (
       `id` VARCHAR(80) PRIMARY KEY,
-      `payload` LONGTEXT NOT NULL,
-      `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      `email` VARCHAR(190) NOT NULL,
+      `nombre` VARCHAR(190) NOT NULL,
+      `telefono` VARCHAR(50) DEFAULT '',
+      `role` VARCHAR(80) DEFAULT 'Abogado',
+      `password_hash` VARCHAR(255) NOT NULL,
+      `is_admin` TINYINT(1) NOT NULL DEFAULT 0,
+      `active` TINYINT(1) NOT NULL DEFAULT 1,
+      `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+      `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
     foreach ($entities as $entity) {
@@ -71,6 +78,49 @@ function fetchCollection(PDO $pdo, string $table): array {
         }
     }
     return $items;
+}
+
+function fetchUsers(PDO $pdo): array {
+    $rows = $pdo->query("SELECT id, email, nombre, telefono, role, password_hash, is_admin, active, created_at, updated_at FROM `abogapp_users`")->fetchAll(PDO::FETCH_ASSOC);
+    return array_map(static function (array $row): array {
+        return [
+            'id' => (string)($row['id'] ?? ''),
+            'correo' => (string)($row['email'] ?? ''),
+            'nombre' => (string)($row['nombre'] ?? ''),
+            'telefono' => (string)($row['telefono'] ?? ''),
+            'rol' => (string)($row['role'] ?? 'Abogado'),
+            'password' => (string)($row['password_hash'] ?? ''),
+            'isAdmin' => (bool)($row['is_admin'] ?? 0),
+            'activo' => (bool)($row['active'] ?? 1),
+            'createdAt' => $row['created_at'] ?? null,
+            'updatedAt' => $row['updated_at'] ?? null,
+        ];
+    }, $rows);
+}
+
+function replaceUsers(PDO $pdo, array $users): void {
+    $pdo->exec("DELETE FROM `abogapp_users`");
+    $stmt = $pdo->prepare("INSERT INTO `abogapp_users`
+      (id, email, nombre, telefono, role, password_hash, is_admin, active, created_at, updated_at)
+      VALUES
+      (:id, :email, :nombre, :telefono, :role, :password_hash, :is_admin, :active, :created_at, :updated_at)");
+
+    foreach ($users as $user) {
+        if (!is_array($user) || empty($user['id'])) continue;
+        $rol = (string)($user['rol'] ?? 'Abogado');
+        $stmt->execute([
+            'id' => (string)$user['id'],
+            'email' => (string)($user['correo'] ?? ''),
+            'nombre' => (string)($user['nombre'] ?? ''),
+            'telefono' => (string)($user['telefono'] ?? ''),
+            'role' => $rol,
+            'password_hash' => (string)($user['password'] ?? ''),
+            'is_admin' => (int)(($user['isAdmin'] ?? null) ? 1 : ($rol === 'Administrador' ? 1 : 0)),
+            'active' => (int)(($user['activo'] ?? true) ? 1 : 0),
+            'created_at' => $user['createdAt'] ?? null,
+            'updated_at' => $user['updatedAt'] ?? null,
+        ]);
+    }
 }
 
 function replaceCollection(PDO $pdo, string $table, array $items): void {
@@ -112,7 +162,7 @@ try {
 
         $state = [
             'session' => is_array($session) ? $session : null,
-            'users' => fetchCollection($pdo, $tables['users']),
+            'users' => fetchUsers($pdo),
             'clientes' => fetchCollection($pdo, $tables['clientes']),
             'asuntos' => fetchCollection($pdo, $tables['asuntos']),
             'causas' => fetchCollection($pdo, $tables['causas']),
@@ -135,7 +185,7 @@ try {
 
     $pdo->beginTransaction();
 
-    replaceCollection($pdo, $tables['users'], $state['users'] ?? []);
+    replaceUsers($pdo, $state['users'] ?? []);
     replaceCollection($pdo, $tables['clientes'], $state['clientes'] ?? []);
     replaceCollection($pdo, $tables['asuntos'], $state['asuntos'] ?? []);
     replaceCollection($pdo, $tables['causas'], $state['causas'] ?? []);
