@@ -193,6 +193,13 @@ function openModal(id){
   if(modalTitles[id]) setModalTitle(id, modalTitles[id]);
   if(id === 'plazoModal'){ setField('#plazoInicio', tomorrowISO()); setField('#plazoTipo', 'Judiciales'); }
   if(id === 'asuntoModal'){ setField('#asuntoTipo', 'Judicial'); toggleAsuntoJudicialFields(); }
+  if(id === 'usuarioModal'){
+    const passInput = $('#usuarioPassword');
+    if(passInput){
+      passInput.required = true;
+      passInput.placeholder = '';
+    }
+  }
   $('#modalBackdrop').classList.remove('hidden'); $(`#${id}`).showModal();
 }
 function closeModals(){ $$('.modal').forEach(m=>m.close()); $('#modalBackdrop').classList.add('hidden'); }
@@ -357,7 +364,17 @@ $('#asuntoForm').addEventListener('submit', e=>{
 $('#causaForm').addEventListener('submit', e=>{ e.preventDefault(); upsert('causas', { id: $('#causaId').value || crypto.randomUUID(), asuntoId: $('#causaAsunto').value, tribunal: $('#causaTribunal').value, rit: $('#causaRit').value, rol: $('#causaRol').value, caratula: $('#causaCaratula').value, estadoProcesal: $('#causaEstado').value, etapa: $('#causaEtapa').value, proximaAudiencia: $('#causaAudiencia').value, link: $('#causaLink').value, ultimaActuacion: todayISO() }); closeModals(); });
 $('#tareaForm').addEventListener('submit', e=>{ e.preventDefault(); const responsables = getSelectedValues('#tareaResponsable'); upsert('tareas', { id: $('#tareaId').value || crypto.randomUUID(), asuntoId: $('#tareaAsunto').value, titulo: $('#tareaTitulo').value, responsableIds: responsables, responsableId: responsables[0] || '', vencimiento: $('#tareaVencimiento').value, prioridad: $('#tareaPrioridad').value, estado: $('#tareaEstado').value, descripcion: $('#tareaDescripcion').value, archivada: $('#tareaEstado').value === 'Terminada' }); closeModals(); });
 $('#plazoForm').addEventListener('submit', e=>{ e.preventDefault(); const responsables = getSelectedValues('#plazoResponsable'); upsert('plazos', { id: $('#plazoId').value || crypto.randomUUID(), asuntoId: $('#plazoAsunto').value, nombre: $('#plazoNombre').value, inicio: $('#plazoInicio').value || tomorrowISO(), vencimiento: $('#plazoVencimiento').value, tipoDias: $('#plazoTipo').value || 'Judiciales', responsableIds: responsables, responsableId: responsables[0] || '', estado: $('#plazoEstado').value, observaciones: $('#plazoObs').value }); closeModals(); });
-$('#usuarioForm').addEventListener('submit', e=>{ e.preventDefault(); upsert('users', { id: $('#usuarioId').value || crypto.randomUUID(), nombre: $('#usuarioNombre').value, correo: $('#usuarioCorreo').value, rol: $('#usuarioRol').value, activo: $('#usuarioActivo').value === 'true', password: $('#usuarioPassword').value }); closeModals(); });
+$('#usuarioForm').addEventListener('submit', e=>{ 
+  e.preventDefault();
+  const existing = state.users.find(u => u.id === $('#usuarioId').value);
+  const plainPassword = $('#usuarioPassword').value;
+  if(!existing && !plainPassword){
+    alert('Debe ingresar una contraseña para el nuevo usuario.');
+    return;
+  }
+  upsert('users', { id: $('#usuarioId').value || crypto.randomUUID(), nombre: $('#usuarioNombre').value, correo: $('#usuarioCorreo').value, rol: $('#usuarioRol').value, activo: $('#usuarioActivo').value === 'true', password: plainPassword || existing?.password || '' });
+  closeModals();
+});
 
 function upsert(collection, item){
   const ix = state[collection].findIndex(x=>x.id===item.id);
@@ -900,8 +917,20 @@ function renderArchivo(){
   el.innerHTML = `<div class="section-header"><div><h3>Archivo</h3><p>Registros completados y archivados, separados por categoría.</p></div><span class="badge ok">${total} archivados</span></div><div class="archive-grid">${card('Asuntos archivados', asuntos.length, asuntoBody)}${card('Causas judiciales archivadas', causas.length, causaBody)}${card('Tareas archivadas', tareas.length, tareaBody)}${card('Plazos archivados', plazos.length, plazoBody)}</div>`;
 }
 function renderUsuarios(){
-  $('#usuariosList').innerHTML = state.users.map(u=>`<article class="entity-card"><span class="badge ${u.activo?'ok':'danger'}">${u.activo?'Activo':'Inactivo'}</span><h4>${u.nombre}</h4><p>${u.correo}</p><p>Rol: ${u.rol}</p><div class="card-actions"><button class="mini-btn danger" onclick="removeItem('users','${u.id}')">Eliminar</button></div></article>`).join('');
+  $('#usuariosList').innerHTML = state.users.map(u=>`<article class="entity-card clickable-card" onclick="editUser('${u.id}')"><span class="badge ${u.activo?'ok':'danger'}">${u.activo?'Activo':'Inactivo'}</span><h4>${u.nombre}</h4><p>${u.correo}</p><p>Rol: ${u.rol}</p><div class="card-actions"><button class="mini-btn" onclick="event.stopPropagation(); editUser('${u.id}')">Editar</button><button class="mini-btn danger" onclick="event.stopPropagation(); removeItem('users','${u.id}')">Eliminar</button></div></article>`).join('');
 }
+function editUser(id){
+  const u = state.users.find(x => x.id === id); if(!u) return;
+  closeModals(); openModal('usuarioModal'); setModalTitle('usuarioModal','Editar usuario');
+  setField('#usuarioId', u.id); setField('#usuarioNombre', u.nombre); setField('#usuarioCorreo', u.correo); setField('#usuarioRol', u.rol); setField('#usuarioActivo', String(!!u.activo));
+  setField('#usuarioPassword', '');
+  const passInput = $('#usuarioPassword');
+  if(passInput){
+    passInput.required = false;
+    passInput.placeholder = 'Dejar en blanco para no cambiar';
+  }
+}
+window.editUser = editUser;
 
 ['clienteSearch','asuntoSearch','causaSearch'].forEach(id => document.addEventListener('input', e => { if(e.target.id===id) renderAll(); }));
 
