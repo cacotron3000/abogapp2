@@ -201,14 +201,22 @@
       <h3>Nuevo asunto</h3>
       <input type="hidden" id="asuntoId" />
       <div class="form-grid">
+        <label>Tipo<select id="asuntoTipo"><option>Judicial</option><option>Extrajudicial</option></select></label>
         <label>Cliente<select id="asuntoCliente" required></select></label>
         <label>Nombre del asunto<input id="asuntoNombre" required /></label>
-        <label>Tipo<select id="asuntoTipo"><option>Judicial</option><option>Extrajudicial</option></select></label>
         <label>Área<select id="asuntoArea"><option>Laboral</option><option>Civil</option><option>Familia</option><option>Policía Local</option><option>Corte de Apelaciones</option><option>Corte Suprema</option><option>Otro</option></select></label>
         <label>Materia<input id="asuntoMateria" /></label>
         <label>Prioridad<select id="asuntoPrioridad"><option>Baja</option><option>Media</option><option>Alta</option><option>Urgente</option></select></label>
         <label>Estado<select id="asuntoEstado"><option>Nuevo</option><option>En análisis</option><option>En preparación</option><option>Activo</option><option>En espera</option><option>Terminado</option><option>Archivado</option></select></label>
         <label>Responsable(s)<select id="asuntoResponsable" multiple></select><small>Puede seleccionar uno o más responsables.</small></label>
+        <label class="judicial-only">Tribunal<input id="asuntoCausaTribunal" placeholder="Juzgado de Letras del Trabajo de La Serena" /></label>
+        <label class="judicial-only">RIT<input id="asuntoCausaRit" /></label>
+        <label class="judicial-only">ROL<input id="asuntoCausaRol" /></label>
+        <label class="wide judicial-only">Carátula<input id="asuntoCausaCaratula" /></label>
+        <label class="judicial-only">Estado procesal<input id="asuntoCausaEstado" placeholder="Audiencia preparatoria pendiente" /></label>
+        <label class="judicial-only">Etapa<input id="asuntoCausaEtapa" placeholder="Discusión / Prueba / Recursos" /></label>
+        <label class="judicial-only">Próxima audiencia<input id="asuntoCausaAudiencia" type="date" /></label>
+        <label class="wide judicial-only">Link PJUD<input id="asuntoCausaLink" type="url" /></label>
         <label class="wide">Observaciones<textarea id="asuntoObs"></textarea></label>
       </div>
       <div class="modal-actions"><button type="button" class="secondary-btn close-modal">Cancelar</button><button class="primary-btn">Guardar</button></div>

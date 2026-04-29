@@ -192,6 +192,7 @@ function openModal(id){
   const modalTitles = { clienteModal:'Nuevo cliente', asuntoModal:'Nuevo asunto', causaModal:'Nueva causa judicial', tareaModal:'Nueva tarea', plazoModal:'Nuevo plazo', usuarioModal:'Nuevo usuario' };
   if(modalTitles[id]) setModalTitle(id, modalTitles[id]);
   if(id === 'plazoModal'){ setField('#plazoInicio', tomorrowISO()); setField('#plazoTipo', 'Judiciales'); }
+  if(id === 'asuntoModal'){ setField('#asuntoTipo', 'Judicial'); toggleAsuntoJudicialFields(); }
   $('#modalBackdrop').classList.remove('hidden'); $(`#${id}`).showModal();
 }
 function closeModals(){ $$('.modal').forEach(m=>m.close()); $('#modalBackdrop').classList.add('hidden'); }
@@ -323,14 +324,36 @@ document.addEventListener('change', e => {
   if(['causaClienteFiltro','tareaClienteFiltro','plazoClienteFiltro'].includes(e.target.id)){
     hydrateAsuntoSelectsByCliente();
   }
+  if(e.target.id === 'asuntoTipo'){
+    toggleAsuntoJudicialFields();
+  }
 });
+function toggleAsuntoJudicialFields(){
+  const isJudicial = ($('#asuntoTipo')?.value || '') === 'Judicial';
+  $$('.judicial-only').forEach(el => el.classList.toggle('hidden', !isJudicial));
+  const tribunal = $('#asuntoCausaTribunal');
+  if(tribunal) tribunal.required = isJudicial;
+}
 
 
 const cotizacionForm = $('#cotizacionForm');
 if(cotizacionForm) cotizacionForm.addEventListener('submit', e => { e.preventDefault(); guardarCotizacion(); });
 
 $('#clienteForm').addEventListener('submit', e=>{ e.preventDefault(); upsert('clientes', { id: $('#clienteId').value || crypto.randomUUID(), tipo: $('#clienteTipo').value, nombre: $('#clienteNombre').value, rut: $('#clienteRut').value, correo: $('#clienteCorreo').value, telefono: $('#clienteTelefono').value, comuna: $('#clienteComuna').value, region: $('#clienteRegion').value, estado: $('#clienteEstado').value, observaciones: $('#clienteObs').value, createdAt: new Date().toISOString() }); closeModals(); });
-$('#asuntoForm').addEventListener('submit', e=>{ e.preventDefault(); const responsables = getSelectedValues('#asuntoResponsable'); upsert('asuntos', { id: $('#asuntoId').value || crypto.randomUUID(), clienteId: $('#asuntoCliente').value, nombre: $('#asuntoNombre').value, tipo: $('#asuntoTipo').value, area: $('#asuntoArea').value, materia: $('#asuntoMateria').value, prioridad: $('#asuntoPrioridad').value, estado: $('#asuntoEstado').value, responsableIds: responsables, responsableId: responsables[0] || '', observaciones: $('#asuntoObs').value, fechaIngreso: todayISO(), archivado: ['Terminado','Archivado'].includes($('#asuntoEstado').value) }); closeModals(); });
+$('#asuntoForm').addEventListener('submit', e=>{ 
+  e.preventDefault();
+  const asuntoId = $('#asuntoId').value || crypto.randomUUID();
+  const tipo = $('#asuntoTipo').value;
+  const responsables = getSelectedValues('#asuntoResponsable');
+  upsert('asuntos', { id: asuntoId, clienteId: $('#asuntoCliente').value, nombre: $('#asuntoNombre').value, tipo, area: $('#asuntoArea').value, materia: $('#asuntoMateria').value, prioridad: $('#asuntoPrioridad').value, estado: $('#asuntoEstado').value, responsableIds: responsables, responsableId: responsables[0] || '', observaciones: $('#asuntoObs').value, fechaIngreso: todayISO(), archivado: ['Terminado','Archivado'].includes($('#asuntoEstado').value) });
+  if(tipo === 'Judicial'){
+    const existing = state.causas.find(c => c.asuntoId === asuntoId);
+    upsert('causas', { id: existing?.id || crypto.randomUUID(), asuntoId, tribunal: $('#asuntoCausaTribunal').value, rit: $('#asuntoCausaRit').value, rol: $('#asuntoCausaRol').value, caratula: $('#asuntoCausaCaratula').value, estadoProcesal: $('#asuntoCausaEstado').value, etapa: $('#asuntoCausaEtapa').value, proximaAudiencia: $('#asuntoCausaAudiencia').value, link: $('#asuntoCausaLink').value, ultimaActuacion: todayISO() });
+  } else {
+    state.causas = state.causas.filter(c => c.asuntoId !== asuntoId);
+  }
+  closeModals();
+});
 $('#causaForm').addEventListener('submit', e=>{ e.preventDefault(); upsert('causas', { id: $('#causaId').value || crypto.randomUUID(), asuntoId: $('#causaAsunto').value, tribunal: $('#causaTribunal').value, rit: $('#causaRit').value, rol: $('#causaRol').value, caratula: $('#causaCaratula').value, estadoProcesal: $('#causaEstado').value, etapa: $('#causaEtapa').value, proximaAudiencia: $('#causaAudiencia').value, link: $('#causaLink').value, ultimaActuacion: todayISO() }); closeModals(); });
 $('#tareaForm').addEventListener('submit', e=>{ e.preventDefault(); const responsables = getSelectedValues('#tareaResponsable'); upsert('tareas', { id: $('#tareaId').value || crypto.randomUUID(), asuntoId: $('#tareaAsunto').value, titulo: $('#tareaTitulo').value, responsableIds: responsables, responsableId: responsables[0] || '', vencimiento: $('#tareaVencimiento').value, prioridad: $('#tareaPrioridad').value, estado: $('#tareaEstado').value, descripcion: $('#tareaDescripcion').value, archivada: $('#tareaEstado').value === 'Terminada' }); closeModals(); });
 $('#plazoForm').addEventListener('submit', e=>{ e.preventDefault(); const responsables = getSelectedValues('#plazoResponsable'); upsert('plazos', { id: $('#plazoId').value || crypto.randomUUID(), asuntoId: $('#plazoAsunto').value, nombre: $('#plazoNombre').value, inicio: $('#plazoInicio').value || tomorrowISO(), vencimiento: $('#plazoVencimiento').value, tipoDias: $('#plazoTipo').value || 'Judiciales', responsableIds: responsables, responsableId: responsables[0] || '', estado: $('#plazoEstado').value, observaciones: $('#plazoObs').value }); closeModals(); });
@@ -436,10 +459,14 @@ function editCliente(id){
 }
 function editAsunto(id){
   const a = getAsunto(id); if(!a) return;
+  const c = state.causas.find(x => x.asuntoId === a.id);
   closeModals(); openModal('asuntoModal'); setModalTitle('asuntoModal','Editar asunto');
   setField('#asuntoId', a.id); setField('#asuntoCliente', a.clienteId); setField('#asuntoNombre', a.nombre); setField('#asuntoTipo', a.tipo);
   setField('#asuntoArea', a.area); setField('#asuntoMateria', a.materia); setField('#asuntoPrioridad', a.prioridad); setField('#asuntoEstado', a.estado);
   setField('#asuntoResponsable', a.responsableIds || a.responsableId); setField('#asuntoObs', a.observaciones);
+  setField('#asuntoCausaTribunal', c?.tribunal); setField('#asuntoCausaRit', c?.rit); setField('#asuntoCausaRol', c?.rol); setField('#asuntoCausaCaratula', c?.caratula);
+  setField('#asuntoCausaEstado', c?.estadoProcesal); setField('#asuntoCausaEtapa', c?.etapa); setField('#asuntoCausaAudiencia', c?.proximaAudiencia); setField('#asuntoCausaLink', c?.link);
+  toggleAsuntoJudicialFields();
 }
 function editCausa(id){
   const c = state.causas.find(x=>x.id===id); if(!c) return;
