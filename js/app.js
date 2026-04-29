@@ -55,6 +55,7 @@ async function pullFromCpanelDb(){
     if(!data.state){ showSyncMessage('No hay datos guardados aún en DB cPanel.'); return; }
     state = data.state;
     normalizeState();
+    applyRolePermissions();
     renderAll();
     showSyncMessage('Datos leídos desde cPanel correctamente.');
   }catch(err){
@@ -142,11 +143,24 @@ function updateSidebarUserName(){
   const el = $('#sidebarUserName');
   if(el) el.textContent = state.session?.nombre || state.session?.correo || 'Usuario';
 }
+function isAdminSession(){
+  const rol = String(state.session?.rol || '').toLowerCase();
+  return rol === 'administrador' || rol === 'admin';
+}
+function applyRolePermissions(){
+  const canManageUsers = isAdminSession();
+  const userNavBtn = document.querySelector('.nav-item[data-view="usuarios"]');
+  if(userNavBtn) userNavBtn.classList.toggle('hidden', !canManageUsers);
+  if(!canManageUsers && document.querySelector('.nav-item.active')?.dataset?.view === 'usuarios'){
+    switchView('dashboard');
+  }
+}
 
 function showApp(){
   $('#loginScreen').classList.add('hidden');
   $('#appShell').classList.remove('hidden');
   updateSidebarUserName();
+  applyRolePermissions();
   renderAll();
   pullFromCpanelDb();
 }
@@ -154,6 +168,10 @@ if(state.session) showApp();
 
 $$('.nav-item').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
 function switchView(view){
+  if(view === 'usuarios' && !isAdminSession()){
+    showSyncMessage('Acceso restringido: solo administradores.');
+    view = 'dashboard';
+  }
   $$('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
   $$('.view').forEach(v=>v.classList.remove('active-view'));
   $(`#${view}View`).classList.add('active-view');
