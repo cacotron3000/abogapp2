@@ -19,6 +19,54 @@ function loadState(){
   try { return JSON.parse(raw); } catch { return structuredClone(initialState); }
 }
 function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+let syncMessageTimer = null;
+function showSyncMessage(message, isError = false){
+  clearTimeout(syncMessageTimer);
+  const subtitle = $('#viewSubtitle');
+  if(!subtitle) return;
+  const prev = subtitle.dataset.prevText || subtitle.textContent;
+  subtitle.dataset.prevText = prev;
+  subtitle.textContent = message;
+  subtitle.style.color = isError ? '#b42318' : '#067647';
+  syncMessageTimer = setTimeout(() => {
+    subtitle.textContent = subtitle.dataset.prevText || subtitle.textContent;
+    subtitle.style.color = '';
+  }, 3500);
+}
+async function apiSync(action, payload = {}){
+  const res = await fetch('backend/sync.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...payload })
+  });
+  const data = await res.json().catch(()=>({ ok:false, error:'Respuesta inválida del servidor' }));
+  if(!res.ok || !data.ok) throw new Error(data.error || `Error HTTP ${res.status}`);
+  return data;
+}
+async function pullFromCpanelDb(){
+  try{
+    const data = await apiSync('pull');
+    if(!data.state){ showSyncMessage('No hay datos guardados aún en DB cPanel.'); return; }
+    state = data.state;
+    normalizeState();
+    renderAll();
+    showSyncMessage('Datos leídos desde cPanel correctamente.');
+  }catch(err){
+    console.error(err);
+    alert(`No fue posible leer la base de datos: ${err.message}`);
+    showSyncMessage('Error al leer desde DB cPanel.', true);
+  }
+}
+async function pushToCpanelDb(){
+  try{
+    await apiSync('push', { state });
+    showSyncMessage('Datos escritos en DB cPanel correctamente.');
+  }catch(err){
+    console.error(err);
+    alert(`No fue posible escribir en la base de datos: ${err.message}`);
+    showSyncMessage('Error al escribir en DB cPanel.', true);
+  }
+}
 function normalizeState(){
   state.cotizaciones = (state.cotizaciones || []).map(c => ({ ...c, numero: Number(c.numero) || 0 }));
   state.clientes = (state.clientes || []).sort((a,b)=>String(a.nombre||'').localeCompare(String(b.nombre||''), 'es', { sensitivity:'base' }));
@@ -60,6 +108,8 @@ $('#loginForm').addEventListener('submit', e => {
   showApp();
 });
 $('#logoutBtn').addEventListener('click', () => { state.session = null; saveState(); location.reload(); });
+$('#syncPullBtn')?.addEventListener('click', pullFromCpanelDb);
+$('#syncPushBtn')?.addEventListener('click', pushToCpanelDb);
 
 function updateSidebarUserName(){
   const el = $('#sidebarUserName');
