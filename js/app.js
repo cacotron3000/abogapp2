@@ -56,6 +56,12 @@ async function forceSync(){
   setSyncStatus('Estado sync: sincronizando…', 'running');
   try{
     const data = await pullall();
+    const errors = data.errors || {};
+    const errorCount = Object.keys(errors).length;
+    if(errorCount){
+      const first = Object.entries(errors)[0];
+      return setSyncStatus(`Sync parcial: ${errorCount} tabla(s) con error (${first[0]})`, 'error');
+    }
     setSyncStatus(`Estado sync: OK (${Object.keys(data.tables||{}).length} tablas)`, 'ok');
   }catch(e){
     setSyncStatus('Estado sync: error al sincronizar', 'error');

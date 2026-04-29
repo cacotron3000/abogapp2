@@ -31,8 +31,16 @@ try {
 
   if ($action === 'pull_all') {
     $data = [];
-    foreach($allowed as $t){ $data[$t] = $pdo->query("SELECT * FROM `$t`")->fetchAll(PDO::FETCH_ASSOC); }
-    out(['ok'=>true,'tables'=>$data]);
+    $errors = [];
+    foreach($allowed as $t){
+      try {
+        $data[$t] = $pdo->query("SELECT * FROM `$t`")->fetchAll(PDO::FETCH_ASSOC);
+      } catch (Throwable $te) {
+        $data[$t] = [];
+        $errors[$t] = $te->getMessage();
+      }
+    }
+    out(['ok'=>true,'tables'=>$data,'errors'=>$errors]);
   }
 
   $input = json_decode(file_get_contents('php://input'), true) ?: [];
