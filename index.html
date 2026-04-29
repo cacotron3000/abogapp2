@@ -236,7 +236,10 @@
         <label class="wide">Carátula<input id="causaCaratula" /></label>
         <label>Estado procesal<input id="causaEstado" placeholder="Audiencia preparatoria pendiente" /></label>
         <label>Etapa<input id="causaEtapa" placeholder="Discusión / Prueba / Recursos" /></label>
-        <label>Próxima audiencia<input id="causaAudiencia" type="date" /></label>
+        <label class="wide">Audiencias
+          <div id="causaAudienciasContainer" class="audiencias-container"></div>
+          <button type="button" id="addAudienciaBtn" class="secondary-btn small-action">+ Agregar audiencia</button>
+        </label>
         <label class="wide">Link PJUD<input id="causaLink" type="url" /></label>
       </div>
       <div class="modal-actions"><button type="button" class="secondary-btn close-modal">Cancelar</button><button class="primary-btn">Guardar</button></div>

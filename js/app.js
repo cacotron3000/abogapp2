@@ -193,6 +193,11 @@ function openModal(id){
   if(modalTitles[id]) setModalTitle(id, modalTitles[id]);
   if(id === 'plazoModal'){ setField('#plazoInicio', tomorrowISO()); setField('#plazoTipo', 'Judiciales'); }
   if(id === 'asuntoModal'){ setField('#asuntoTipo', 'Judicial'); toggleAsuntoJudicialFields(); }
+  if(id === 'causaModal'){
+    const box = $('#causaAudienciasContainer');
+    if(box) box.innerHTML = '';
+    addAudienciaRow();
+  }
   if(id === 'usuarioModal'){
     const passInput = $('#usuarioPassword');
     if(passInput){
@@ -334,12 +339,58 @@ document.addEventListener('change', e => {
   if(e.target.id === 'asuntoTipo'){
     toggleAsuntoJudicialFields();
   }
+  if(e.target.classList?.contains('audiencia-tipo')){
+    const wrap = e.target.closest('.audiencia-row')?.querySelector('.audiencia-otro-wrap');
+    if(wrap) wrap.classList.toggle('hidden', e.target.value !== 'Otro');
+  }
+});
+$('#addAudienciaBtn')?.addEventListener('click', () => addAudienciaRow());
+document.addEventListener('click', e => {
+  if(e.target.classList?.contains('remove-audiencia')){
+    const row = e.target.closest('.audiencia-row');
+    row?.remove();
+    if(!$$('#causaAudienciasContainer .audiencia-row').length) addAudienciaRow();
+  }
 });
 function toggleAsuntoJudicialFields(){
   const isJudicial = ($('#asuntoTipo')?.value || '') === 'Judicial';
   $$('.judicial-only').forEach(el => el.classList.toggle('hidden', !isJudicial));
   const tribunal = $('#asuntoCausaTribunal');
   if(tribunal) tribunal.required = isJudicial;
+}
+function audienciaTypeOptions(selected=''){
+  const opts = ['Preparatoria','Juicio','Única','Otro'];
+  return opts.map(o=>`<option value="${o}" ${selected===o?'selected':''}>${o}</option>`).join('');
+}
+function addAudienciaRow(values = {}){
+  const row = document.createElement('div');
+  row.className = 'audiencia-row';
+  row.innerHTML = `
+    <label>Tipo<select class="audiencia-tipo">${audienciaTypeOptions(values.tipo || 'Preparatoria')}</select></label>
+    <label class="audiencia-otro-wrap ${values.tipo === 'Otro' ? '' : 'hidden'}">Otro<input class="audiencia-otro" value="${safe(values.otro || '')}" /></label>
+    <label>Fecha<input class="audiencia-fecha" type="date" value="${safe(values.fecha || '')}" /></label>
+    <label>Hora<input class="audiencia-hora" type="time" value="${safe(values.hora || '')}" /></label>
+    <button type="button" class="mini-btn danger remove-audiencia">Quitar</button>
+  `;
+  $('#causaAudienciasContainer')?.appendChild(row);
+}
+function getCausaAudienciasFromForm(){
+  return $$('#causaAudienciasContainer .audiencia-row').map(row => {
+    const tipo = row.querySelector('.audiencia-tipo')?.value || 'Preparatoria';
+    return {
+      id: crypto.randomUUID(),
+      tipo,
+      otro: tipo === 'Otro' ? (row.querySelector('.audiencia-otro')?.value || '') : '',
+      fecha: row.querySelector('.audiencia-fecha')?.value || '',
+      hora: row.querySelector('.audiencia-hora')?.value || ''
+    };
+  }).filter(a => a.fecha || a.hora || a.otro);
+}
+function nextAudiencia(causa){
+  const list = Array.isArray(causa.audiencias) ? causa.audiencias : [];
+  return list
+    .filter(a => a?.fecha)
+    .sort((a,b)=>(`${a.fecha}T${a.hora||'00:00'}`).localeCompare(`${b.fecha}T${b.hora||'00:00'}`))[0] || null;
 }
 
 
@@ -355,13 +406,20 @@ $('#asuntoForm').addEventListener('submit', e=>{
   upsert('asuntos', { id: asuntoId, clienteId: $('#asuntoCliente').value, nombre: $('#asuntoNombre').value, tipo, area: $('#asuntoArea').value, materia: $('#asuntoMateria').value, prioridad: $('#asuntoPrioridad').value, estado: $('#asuntoEstado').value, responsableIds: responsables, responsableId: responsables[0] || '', observaciones: $('#asuntoObs').value, fechaIngreso: todayISO(), archivado: ['Terminado','Archivado'].includes($('#asuntoEstado').value) });
   if(tipo === 'Judicial'){
     const existing = state.causas.find(c => c.asuntoId === asuntoId);
-    upsert('causas', { id: existing?.id || crypto.randomUUID(), asuntoId, tribunal: $('#asuntoCausaTribunal').value, rit: $('#asuntoCausaRit').value, rol: $('#asuntoCausaRol').value, caratula: $('#asuntoCausaCaratula').value, estadoProcesal: $('#asuntoCausaEstado').value, etapa: $('#asuntoCausaEtapa').value, proximaAudiencia: $('#asuntoCausaAudiencia').value, link: $('#asuntoCausaLink').value, ultimaActuacion: todayISO() });
+    const audiencias = $('#asuntoCausaAudiencia').value ? [{ id: crypto.randomUUID(), tipo:'Preparatoria', otro:'', fecha: $('#asuntoCausaAudiencia').value, hora:'' }] : [];
+    upsert('causas', { id: existing?.id || crypto.randomUUID(), asuntoId, tribunal: $('#asuntoCausaTribunal').value, rit: $('#asuntoCausaRit').value, rol: $('#asuntoCausaRol').value, caratula: $('#asuntoCausaCaratula').value, estadoProcesal: $('#asuntoCausaEstado').value, etapa: $('#asuntoCausaEtapa').value, audiencias, proximaAudiencia: $('#asuntoCausaAudiencia').value, link: $('#asuntoCausaLink').value, ultimaActuacion: todayISO() });
   } else {
     state.causas = state.causas.filter(c => c.asuntoId !== asuntoId);
   }
   closeModals();
 });
-$('#causaForm').addEventListener('submit', e=>{ e.preventDefault(); upsert('causas', { id: $('#causaId').value || crypto.randomUUID(), asuntoId: $('#causaAsunto').value, tribunal: $('#causaTribunal').value, rit: $('#causaRit').value, rol: $('#causaRol').value, caratula: $('#causaCaratula').value, estadoProcesal: $('#causaEstado').value, etapa: $('#causaEtapa').value, proximaAudiencia: $('#causaAudiencia').value, link: $('#causaLink').value, ultimaActuacion: todayISO() }); closeModals(); });
+$('#causaForm').addEventListener('submit', e=>{ 
+  e.preventDefault();
+  const audiencias = getCausaAudienciasFromForm();
+  const prox = audiencias.filter(a=>a.fecha).sort((a,b)=>(`${a.fecha}T${a.hora||'00:00'}`).localeCompare(`${b.fecha}T${b.hora||'00:00'}`))[0];
+  upsert('causas', { id: $('#causaId').value || crypto.randomUUID(), asuntoId: $('#causaAsunto').value, tribunal: $('#causaTribunal').value, rit: $('#causaRit').value, rol: $('#causaRol').value, caratula: $('#causaCaratula').value, estadoProcesal: $('#causaEstado').value, etapa: $('#causaEtapa').value, audiencias, proximaAudiencia: prox?.fecha || '', link: $('#causaLink').value, ultimaActuacion: todayISO() }); 
+  closeModals(); 
+});
 $('#tareaForm').addEventListener('submit', e=>{ e.preventDefault(); const responsables = getSelectedValues('#tareaResponsable'); upsert('tareas', { id: $('#tareaId').value || crypto.randomUUID(), asuntoId: $('#tareaAsunto').value, titulo: $('#tareaTitulo').value, responsableIds: responsables, responsableId: responsables[0] || '', vencimiento: $('#tareaVencimiento').value, prioridad: $('#tareaPrioridad').value, estado: $('#tareaEstado').value, descripcion: $('#tareaDescripcion').value, archivada: $('#tareaEstado').value === 'Terminada' }); closeModals(); });
 $('#plazoForm').addEventListener('submit', e=>{ e.preventDefault(); const responsables = getSelectedValues('#plazoResponsable'); upsert('plazos', { id: $('#plazoId').value || crypto.randomUUID(), asuntoId: $('#plazoAsunto').value, nombre: $('#plazoNombre').value, inicio: $('#plazoInicio').value || tomorrowISO(), vencimiento: $('#plazoVencimiento').value, tipoDias: $('#plazoTipo').value || 'Judiciales', responsableIds: responsables, responsableId: responsables[0] || '', estado: $('#plazoEstado').value, observaciones: $('#plazoObs').value }); closeModals(); });
 $('#usuarioForm').addEventListener('submit', e=>{ 
@@ -490,7 +548,13 @@ function editCausa(id){
   closeModals(); openModal('causaModal'); setModalTitle('causaModal','Editar causa judicial');
   setField('#causaId', c.id); setField('#causaClienteFiltro', getAsunto(c.asuntoId)?.clienteId || ''); hydrateAsuntoSelectsByCliente(); setField('#causaAsunto', c.asuntoId); setField('#causaTribunal', c.tribunal); setField('#causaRit', c.rit);
   setField('#causaRol', c.rol); setField('#causaCaratula', c.caratula); setField('#causaEstado', c.estadoProcesal); setField('#causaEtapa', c.etapa);
-  setField('#causaAudiencia', c.proximaAudiencia); setField('#causaLink', c.link);
+  const box = $('#causaAudienciasContainer');
+  if(box){
+    box.innerHTML = '';
+    const auds = Array.isArray(c.audiencias) && c.audiencias.length ? c.audiencias : [{ tipo:'Preparatoria', fecha:c.proximaAudiencia || '', hora:'' }];
+    auds.forEach(a => addAudienciaRow(a));
+  }
+  setField('#causaLink', c.link);
 }
 function editTarea(id){
   const t = state.tareas.find(x=>x.id===id); if(!t) return;
@@ -886,7 +950,7 @@ function renderCausas(){
   const q = ($('#causaSearch')?.value || '').toLowerCase();
   const items = state.causas.filter(c=>asuntoActivo(c.asuntoId) && causaActiva(c)).filter(c=>[c.tribunal,c.rit,c.rol,c.caratula].join(' ').toLowerCase().includes(q));
   const archivadas = state.causas.filter(c=>!causaActiva(c)).length;
-  $('#causasList').innerHTML = `<div class="cards-grid embedded-grid">${items.map(c=>`<article class="entity-card clickable-card" onclick="openCausaDetalle('${c.id}')"><span class="badge ok">${safe(c.estadoProcesal || 'Causa')}</span><h4>${safe(c.caratula || getAsunto(c.asuntoId)?.nombre || 'Causa judicial')}</h4><p>${safe(c.tribunal || 'Sin tribunal')}</p><p>RIT/ROL: ${safe(c.rit || '-')} / ${safe(c.rol || '-')}</p><p>Audiencia: ${fmtDate(c.proximaAudiencia)}</p><div class="card-actions"><button class="mini-btn" onclick="event.stopPropagation(); openCausaDetalle('${c.id}')">Ver detalle</button><button class="mini-btn ok-btn" onclick="event.stopPropagation(); completeCausa('${c.id}')">Completar y archivar</button><button class="mini-btn danger" onclick="event.stopPropagation(); removeItem('causas','${c.id}')">Eliminar</button></div></article>`).join('') || '<div class="empty">Sin causas judiciales activas.</div>'}</div>${archivadas ? `<div class="archive-note">${archivadas} causa(s) judicial(es) completada(s) y archivada(s). Revísalas en la sección Archivo.</div>` : ''}`;
+  $('#causasList').innerHTML = `<div class="cards-grid embedded-grid">${items.map(c=>{const prox=nextAudiencia(c); return `<article class="entity-card clickable-card" onclick="openCausaDetalle('${c.id}')"><span class="badge ok">${safe(c.estadoProcesal || 'Causa')}</span><h4>${safe(c.caratula || getAsunto(c.asuntoId)?.nombre || 'Causa judicial')}</h4><p>${safe(c.tribunal || 'Sin tribunal')}</p><p>RIT/ROL: ${safe(c.rit || '-')} / ${safe(c.rol || '-')}</p><p>Próxima audiencia: ${prox ? `${safe(prox.tipo === 'Otro' ? prox.otro : prox.tipo)} · ${fmtDate(prox.fecha)} ${safe(prox.hora || '')}` : 'Sin audiencia'}</p><div class="card-actions"><button class="mini-btn" onclick="event.stopPropagation(); openCausaDetalle('${c.id}')">Ver detalle</button><button class="mini-btn ok-btn" onclick="event.stopPropagation(); completeCausa('${c.id}')">Completar y archivar</button><button class="mini-btn danger" onclick="event.stopPropagation(); removeItem('causas','${c.id}')">Eliminar</button></div></article>`}).join('') || '<div class="empty">Sin causas judiciales activas.</div>'}</div>${archivadas ? `<div class="archive-note">${archivadas} causa(s) judicial(es) completada(s) y archivada(s). Revísalas en la sección Archivo.</div>` : ''}`;
 }
 function renderTareas(){
   const estados = ['Pendiente','En proceso','Atrasada'];
