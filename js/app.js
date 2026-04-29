@@ -147,7 +147,7 @@ function switchView(view){
   $$('.view').forEach(v=>v.classList.remove('active-view'));
   $(`#${view}View`).classList.add('active-view');
   const titles = {
-    dashboard:['Dashboard','Resumen operativo del estudio'], clientes:['Clientes','Base de clientes y potenciales clientes'], asuntos:['Asuntos','Gestión judicial y extrajudicial'], causas:['Causas judiciales','Control de RIT, ROL, tribunal y estado'], tareas:['Tareas','Trabajo pendiente por responsable'], plazos:['Plazos','Vencimientos y alertas'], archivo:['Archivo','Registros completados y archivados por categoría'], usuarios:['Usuarios','Equipo interno del estudio']
+    dashboard:['Dashboard','Resumen operativo del estudio'], clientes:['Clientes','Base de clientes y potenciales clientes'], asuntos:['Asuntos','Gestión judicial y extrajudicial'], causas:['Causas judiciales','Control de RIT, ROL, tribunal y estado'], tareas:['Tareas','Trabajo pendiente por responsable'], plazos:['Plazos','Vencimientos y alertas'], archivo:['Archivo','Registros completados y archivados por categoría'], utilidades:['Utilidades','Sincronización con cPanel e intercambio JSON'], usuarios:['Usuarios','Equipo interno del estudio']
   };
   $('#viewTitle').textContent = titles[view][0]; $('#viewSubtitle').textContent = titles[view][1];
   renderAll();
