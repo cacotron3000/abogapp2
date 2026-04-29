@@ -139,6 +139,12 @@ function replaceUsers(PDO $pdo, array $users): void {
         if (!in_array($col, $existingNames, true)) $pdo->exec($ddl);
     }
 
+    $existingHashes = [];
+    try {
+        $rows = $pdo->query("SELECT id, password_hash FROM `abogapp2_users`")->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as $r) $existingHashes[(string)$r['id']] = (string)($r['password_hash'] ?? '');
+    } catch (Throwable $e) { $existingHashes = []; }
+
     $pdo->exec("DELETE FROM `abogapp2_users`");
     $stmt = $pdo->prepare("INSERT INTO `abogapp2_users`
       (id, email, nombre, telefono, role, password_hash, is_admin, active, created_at, updated_at)
@@ -149,7 +155,10 @@ function replaceUsers(PDO $pdo, array $users): void {
         if (!is_array($user) || empty($user['id'])) continue;
         $rol = (string)($user['rol'] ?? 'Abogado');
         $plainPassword = (string)($user['password'] ?? '');
-        $passwordHash = preg_match('/^\$2y\$/', $plainPassword) ? $plainPassword : password_hash($plainPassword, PASSWORD_DEFAULT);
+        $passwordHash = $existingHashes[(string)$user['id']] ?? '';
+        if ($plainPassword !== '') {
+            $passwordHash = preg_match('/^\$2y\$/', $plainPassword) ? $plainPassword : password_hash($plainPassword, PASSWORD_DEFAULT);
+        }
         $stmt->execute([
             'id' => (string)$user['id'],
             'email' => (string)($user['correo'] ?? ''),
@@ -235,7 +244,9 @@ try {
             echo json_encode(['ok' => false, 'error' => 'La tabla de usuarios está en formato legado. Ejecute una escritura (push) para migrarla.']);
             exit;
         }
-        if (!$user || !(int)$user['active'] || !password_verify($password, (string)$user['password_hash'])) {
+        $hash = (string)($user['password_hash'] ?? '');
+        $validPassword = password_verify($password, $hash) || hash_equals($hash, $password);
+        if (!$user || !(int)$user['active'] || !$validPassword) {
             http_response_code(401);
             echo json_encode(['ok' => false, 'error' => 'Credenciales inválidas.']);
             exit;
