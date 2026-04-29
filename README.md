@@ -17,7 +17,9 @@ Este proyecto ahora incluye un backend para sincronizar usuarios de forma bidire
 - **Base cPanel (origen principal)**
 - **Base de datos de la app (destino local/remoto de tu aplicación)**
 
-La sincronización usa la tabla `abogapp_users` y la clave de negocio es **`email`**.
+La **base de datos** (nombre) es `gjabogad_abogapp` (según tu cPanel) y la **tabla** desde la que se leen usuarios es `abogapp_users`.
+
+La clave de negocio para sincronizar es **`email`**.
 
 ## 1) Requisitos
 
@@ -73,8 +75,8 @@ CPANEL_DB_SSL=true
 # App target DB
 APP_DB_HOST=localhost
 APP_DB_PORT=3306
-APP_DB_NAME=abogapp_local
-APP_DB_USER=abogapp_local_user
+APP_DB_NAME=gjabogad_abogapp
+APP_DB_USER=gjabogad_abogapp
 APP_DB_PASS=********
 APP_DB_SSL=true
 ```
