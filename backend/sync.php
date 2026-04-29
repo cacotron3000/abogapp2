@@ -31,8 +31,15 @@ function tableName(string $prefix, string $entity): string {
 }
 
 function ensureTables(PDO $pdo, string $prefix): array {
-    $entities = ['users', 'clientes', 'asuntos', 'causas', 'tareas', 'plazos', 'cotizaciones', 'logs'];
+    $entities = ['clientes', 'asuntos', 'causas', 'tareas', 'plazos', 'cotizaciones', 'logs'];
     $tables = [];
+    $tables['users'] = 'abogapp_users';
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `abogapp_users` (
+      `id` VARCHAR(80) PRIMARY KEY,
+      `payload` LONGTEXT NOT NULL,
+      `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
     foreach ($entities as $entity) {
         $table = tableName($prefix, $entity);
         $tables[$entity] = $table;

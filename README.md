@@ -35,7 +35,7 @@ En la barra superior hay dos acciones:
 
 ### 4) Estructura en MySQL (por sección)
 El backend crea tablas separadas por sección usando `table_prefix`:
-- `${table_prefix}_users`
+- `abogapp_users` (fija para usuarios de la app)
 - `${table_prefix}_clientes`
 - `${table_prefix}_asuntos`
 - `${table_prefix}_causas` (incluye audiencias dentro de cada causa, por ejemplo `proximaAudiencia`)
