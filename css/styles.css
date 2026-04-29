@@ -151,3 +151,12 @@ select.ss-native{display:none!important}
 /* Branding: el logo solo se muestra en la barra lateral; el encabezado principal no repite logo ni nombre de app. */
 .sidebar-user-name{font-size:.9rem;font-weight:800;color:var(--principal-dark);line-height:1.25;margin-top:2px;max-width:220px;word-break:break-word}
 .topbar-app-brand,.topbar-logo{display:none!important}
+
+.sync-panel{margin-top:auto;display:grid;gap:8px}
+.sync-force-btn{width:100%;padding:10px 12px;font-weight:700}
+.sync-status{font-size:.82rem;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:#f9fafb;color:#4b5563;text-align:center}
+.sync-status.sync-ok{background:#dcfce7;color:var(--ok);border-color:#bbf7d0}
+.sync-status.sync-error{background:#fee2e2;color:var(--danger);border-color:#fecaca}
+.sync-status.sync-running{background:#fef3c7;color:var(--warning);border-color:#fde68a}
+.sync-status.sync-idle{background:#f3f4f6;color:#374151}
+.sidebar .logout-btn{margin-top:10px}
