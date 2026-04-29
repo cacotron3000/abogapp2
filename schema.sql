@@ -1,8 +1,8 @@
 -- Schema base para MySQL/cPanel
 -- Prefijo solicitado: abogapp2
--- Nota: la tabla de usuarios se fija como abogapp_users
+-- Nota: la tabla de usuarios se fija como abogapp2_users
 
-CREATE TABLE IF NOT EXISTS `abogapp_users` (
+CREATE TABLE IF NOT EXISTS `abogapp2_users` (
   `id` VARCHAR(80) PRIMARY KEY,
   `email` VARCHAR(190) NOT NULL,
   `nombre` VARCHAR(190) NOT NULL,

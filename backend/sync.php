@@ -33,8 +33,8 @@ function tableName(string $prefix, string $entity): string {
 function ensureTables(PDO $pdo, string $prefix): array {
     $entities = ['clientes', 'asuntos', 'causas', 'tareas', 'plazos', 'cotizaciones', 'logs'];
     $tables = [];
-    $tables['users'] = 'abogapp_users';
-    $pdo->exec("CREATE TABLE IF NOT EXISTS `abogapp_users` (
+    $tables['users'] = 'abogapp2_users';
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `abogapp2_users` (
       `id` VARCHAR(80) PRIMARY KEY,
       `email` VARCHAR(190) NOT NULL,
       `nombre` VARCHAR(190) NOT NULL,
@@ -81,7 +81,7 @@ function fetchCollection(PDO $pdo, string $table): array {
 }
 
 function fetchUsers(PDO $pdo): array {
-    $rows = $pdo->query("SELECT id, email, nombre, telefono, role, password_hash, is_admin, active, created_at, updated_at FROM `abogapp_users`")->fetchAll(PDO::FETCH_ASSOC);
+    $rows = $pdo->query("SELECT id, email, nombre, telefono, role, password_hash, is_admin, active, created_at, updated_at FROM `abogapp2_users`")->fetchAll(PDO::FETCH_ASSOC);
     return array_map(static function (array $row): array {
         return [
             'id' => (string)($row['id'] ?? ''),
@@ -99,8 +99,8 @@ function fetchUsers(PDO $pdo): array {
 }
 
 function replaceUsers(PDO $pdo, array $users): void {
-    $pdo->exec("DELETE FROM `abogapp_users`");
-    $stmt = $pdo->prepare("INSERT INTO `abogapp_users`
+    $pdo->exec("DELETE FROM `abogapp2_users`");
+    $stmt = $pdo->prepare("INSERT INTO `abogapp2_users`
       (id, email, nombre, telefono, role, password_hash, is_admin, active, created_at, updated_at)
       VALUES
       (:id, :email, :nombre, :telefono, :role, :password_hash, :is_admin, :active, :created_at, :updated_at)");

@@ -35,7 +35,7 @@ En la barra superior hay dos acciones:
 
 ### 4) Estructura en MySQL (por sección)
 El backend crea tablas separadas por sección usando `table_prefix`:
-- `abogapp_users` (fija para usuarios de la app)
+- `abogapp2_users` (fija para usuarios de la app)
 - `${table_prefix}_clientes`
 - `${table_prefix}_asuntos`
 - `${table_prefix}_causas` (incluye audiencias dentro de cada causa, por ejemplo `proximaAudiencia`)
@@ -47,5 +47,5 @@ El backend crea tablas separadas por sección usando `table_prefix`:
 
 Cada registro se guarda por `id` y `payload` JSON en los módulos funcionales; la tabla de usuarios usa columnas estructuradas.
 
-En `abogapp_users` se usan columnas estructuradas:
+En `abogapp2_users` se usan columnas estructuradas:
 `id`, `email`, `nombre`, `telefono`, `role`, `password_hash`, `is_admin`, `active`, `created_at`, `updated_at`.
