@@ -20,7 +20,7 @@ foreach ($required as $key) {
 
 $input = json_decode(file_get_contents('php://input'), true);
 $action = $input['action'] ?? '';
-if (!in_array($action, ['pull', 'push'], true)) {
+if (!in_array($action, ['pull', 'push', 'verify_login'], true)) {
     http_response_code(400);
     echo json_encode(['ok' => false, 'error' => 'Acción inválida. Use pull o push.']);
     exit;
@@ -89,7 +89,7 @@ function fetchUsers(PDO $pdo): array {
             'nombre' => (string)($row['nombre'] ?? ''),
             'telefono' => (string)($row['telefono'] ?? ''),
             'rol' => (string)($row['role'] ?? 'Abogado'),
-            'password' => (string)($row['password_hash'] ?? ''),
+            'password' => '',
             'isAdmin' => (bool)($row['is_admin'] ?? 0),
             'activo' => (bool)($row['active'] ?? 1),
             'createdAt' => $row['created_at'] ?? null,
@@ -108,13 +108,15 @@ function replaceUsers(PDO $pdo, array $users): void {
     foreach ($users as $user) {
         if (!is_array($user) || empty($user['id'])) continue;
         $rol = (string)($user['rol'] ?? 'Abogado');
+        $plainPassword = (string)($user['password'] ?? '');
+        $passwordHash = preg_match('/^\$2y\$/', $plainPassword) ? $plainPassword : password_hash($plainPassword, PASSWORD_DEFAULT);
         $stmt->execute([
             'id' => (string)$user['id'],
             'email' => (string)($user['correo'] ?? ''),
             'nombre' => (string)($user['nombre'] ?? ''),
             'telefono' => (string)($user['telefono'] ?? ''),
             'role' => $rol,
-            'password_hash' => (string)($user['password'] ?? ''),
+            'password_hash' => $passwordHash,
             'is_admin' => (int)(($user['isAdmin'] ?? null) ? 1 : ($rol === 'Administrador' ? 1 : 0)),
             'active' => (int)(($user['activo'] ?? true) ? 1 : 0),
             'created_at' => $user['createdAt'] ?? null,
@@ -173,6 +175,36 @@ try {
         ];
 
         echo json_encode(['ok' => true, 'state' => $state]);
+        exit;
+    }
+
+    if ($action === 'verify_login') {
+        $email = strtolower(trim((string)($input['email'] ?? '')));
+        $password = (string)($input['password'] ?? '');
+        if ($email === '' || $password === '') {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'error' => 'Debe enviar email y password.']);
+            exit;
+        }
+        $stmt = $pdo->prepare("SELECT id, email, nombre, telefono, role, is_admin, active, created_at, updated_at, password_hash FROM `abogapp2_users` WHERE LOWER(email) = :email LIMIT 1");
+        $stmt->execute(['email' => $email]);
+        $user = $stmt->fetch();
+        if (!$user || !(int)$user['active'] || !password_verify($password, (string)$user['password_hash'])) {
+            http_response_code(401);
+            echo json_encode(['ok' => false, 'error' => 'Credenciales inválidas.']);
+            exit;
+        }
+        echo json_encode(['ok' => true, 'user' => [
+            'id' => (string)$user['id'],
+            'correo' => (string)$user['email'],
+            'nombre' => (string)$user['nombre'],
+            'telefono' => (string)($user['telefono'] ?? ''),
+            'rol' => (string)$user['role'],
+            'isAdmin' => (bool)$user['is_admin'],
+            'activo' => (bool)$user['active'],
+            'createdAt' => $user['created_at'] ?? null,
+            'updatedAt' => $user['updated_at'] ?? null
+        ]]);
         exit;
     }
 

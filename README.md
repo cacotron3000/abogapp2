@@ -32,6 +32,7 @@ En la barra superior hay dos acciones:
 - Recibe POST JSON con:
   - `{ "action": "pull" }`
   - `{ "action": "push", "state": { ... } }`
+  - `{ "action": "verify_login", "email": "...", "password": "..." }`
 
 ### 4) Estructura en MySQL (por sección)
 El backend crea tablas separadas por sección usando `table_prefix`:
@@ -49,3 +50,5 @@ Cada registro se guarda por `id` y `payload` JSON en los módulos funcionales; l
 
 En `abogapp2_users` se usan columnas estructuradas:
 `id`, `email`, `nombre`, `telefono`, `role`, `password_hash`, `is_admin`, `active`, `created_at`, `updated_at`.
+
+Las contraseñas de usuarios se guardan en `password_hash` con `password_hash()` de PHP (no en texto plano).

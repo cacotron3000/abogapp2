@@ -113,11 +113,22 @@ function badgeClass(value){ return ['Urgente','Alta','Vencido','Atrasada'].inclu
 
 function log(action){ state.logs.unshift({ id: crypto.randomUUID(), action, at: new Date().toISOString(), user: state.session?.correo || 'sistema' }); state.logs = state.logs.slice(0,80); saveState(); }
 
-$('#loginForm').addEventListener('submit', e => {
+$('#loginForm').addEventListener('submit', async e => {
   e.preventDefault();
   const email = $('#loginEmail').value.trim().toLowerCase();
   const pass = $('#loginPassword').value;
-  const user = state.users.find(u => u.correo.toLowerCase() === email && u.password === pass && u.activo);
+  let user = state.users.find(u => u.correo.toLowerCase() === email && u.password === pass && u.activo);
+  if(!user){
+    try{
+      const auth = await apiSync('verify_login', { email, password: pass });
+      if(auth?.user){
+        user = auth.user;
+        const ix = state.users.findIndex(u => u.id === user.id);
+        if(ix >= 0) state.users[ix] = { ...state.users[ix], ...user, password: pass };
+        else state.users.push({ ...user, password: pass });
+      }
+    }catch(_e){ /* noop */ }
+  }
   if(!user) return alert('Credenciales incorrectas o usuario inactivo.');
   state.session = { id: user.id, nombre: user.nombre, correo: user.correo, rol: user.rol };
   saveState();
@@ -305,7 +316,7 @@ $('#asuntoForm').addEventListener('submit', e=>{ e.preventDefault(); const respo
 $('#causaForm').addEventListener('submit', e=>{ e.preventDefault(); upsert('causas', { id: $('#causaId').value || crypto.randomUUID(), asuntoId: $('#causaAsunto').value, tribunal: $('#causaTribunal').value, rit: $('#causaRit').value, rol: $('#causaRol').value, caratula: $('#causaCaratula').value, estadoProcesal: $('#causaEstado').value, etapa: $('#causaEtapa').value, proximaAudiencia: $('#causaAudiencia').value, link: $('#causaLink').value, ultimaActuacion: todayISO() }); closeModals(); });
 $('#tareaForm').addEventListener('submit', e=>{ e.preventDefault(); const responsables = getSelectedValues('#tareaResponsable'); upsert('tareas', { id: $('#tareaId').value || crypto.randomUUID(), asuntoId: $('#tareaAsunto').value, titulo: $('#tareaTitulo').value, responsableIds: responsables, responsableId: responsables[0] || '', vencimiento: $('#tareaVencimiento').value, prioridad: $('#tareaPrioridad').value, estado: $('#tareaEstado').value, descripcion: $('#tareaDescripcion').value, archivada: $('#tareaEstado').value === 'Terminada' }); closeModals(); });
 $('#plazoForm').addEventListener('submit', e=>{ e.preventDefault(); const responsables = getSelectedValues('#plazoResponsable'); upsert('plazos', { id: $('#plazoId').value || crypto.randomUUID(), asuntoId: $('#plazoAsunto').value, nombre: $('#plazoNombre').value, inicio: $('#plazoInicio').value || tomorrowISO(), vencimiento: $('#plazoVencimiento').value, tipoDias: $('#plazoTipo').value || 'Judiciales', responsableIds: responsables, responsableId: responsables[0] || '', estado: $('#plazoEstado').value, observaciones: $('#plazoObs').value }); closeModals(); });
-$('#usuarioForm').addEventListener('submit', e=>{ e.preventDefault(); upsert('users', { id: $('#usuarioId').value || crypto.randomUUID(), nombre: $('#usuarioNombre').value, correo: $('#usuarioCorreo').value, rol: $('#usuarioRol').value, activo: $('#usuarioActivo').value === 'true', password: 'demo123' }); closeModals(); });
+$('#usuarioForm').addEventListener('submit', e=>{ e.preventDefault(); upsert('users', { id: $('#usuarioId').value || crypto.randomUUID(), nombre: $('#usuarioNombre').value, correo: $('#usuarioCorreo').value, rol: $('#usuarioRol').value, activo: $('#usuarioActivo').value === 'true', password: $('#usuarioPassword').value }); closeModals(); });
 
 function upsert(collection, item){
   const ix = state[collection].findIndex(x=>x.id===item.id);
