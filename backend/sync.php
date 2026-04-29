@@ -81,24 +81,64 @@ function fetchCollection(PDO $pdo, string $table): array {
 }
 
 function fetchUsers(PDO $pdo): array {
-    $rows = $pdo->query("SELECT id, email, nombre, telefono, role, password_hash, is_admin, active, created_at, updated_at FROM `abogapp2_users`")->fetchAll(PDO::FETCH_ASSOC);
-    return array_map(static function (array $row): array {
-        return [
-            'id' => (string)($row['id'] ?? ''),
-            'correo' => (string)($row['email'] ?? ''),
-            'nombre' => (string)($row['nombre'] ?? ''),
-            'telefono' => (string)($row['telefono'] ?? ''),
-            'rol' => (string)($row['role'] ?? 'Abogado'),
-            'password' => '',
-            'isAdmin' => (bool)($row['is_admin'] ?? 0),
-            'activo' => (bool)($row['active'] ?? 1),
-            'createdAt' => $row['created_at'] ?? null,
-            'updatedAt' => $row['updated_at'] ?? null,
-        ];
-    }, $rows);
+    try {
+        $rows = $pdo->query("SELECT id, email, nombre, telefono, role, password_hash, is_admin, active, created_at, updated_at FROM `abogapp2_users`")->fetchAll(PDO::FETCH_ASSOC);
+        return array_map(static function (array $row): array {
+            return [
+                'id' => (string)($row['id'] ?? ''),
+                'correo' => (string)($row['email'] ?? ''),
+                'nombre' => (string)($row['nombre'] ?? ''),
+                'telefono' => (string)($row['telefono'] ?? ''),
+                'rol' => (string)($row['role'] ?? 'Abogado'),
+                'password' => '',
+                'isAdmin' => (bool)($row['is_admin'] ?? 0),
+                'activo' => (bool)($row['active'] ?? 1),
+                'createdAt' => $row['created_at'] ?? null,
+                'updatedAt' => $row['updated_at'] ?? null,
+            ];
+        }, $rows);
+    } catch (Throwable $e) {
+        // Compatibilidad con versión previa (id + payload JSON)
+        $legacyRows = $pdo->query("SELECT id, payload, updated_at FROM `abogapp2_users`")->fetchAll(PDO::FETCH_ASSOC);
+        $users = [];
+        foreach ($legacyRows as $row) {
+            $p = json_decode((string)($row['payload'] ?? ''), true);
+            if (!is_array($p)) continue;
+            $users[] = [
+                'id' => (string)($p['id'] ?? $row['id'] ?? ''),
+                'correo' => (string)($p['correo'] ?? ''),
+                'nombre' => (string)($p['nombre'] ?? ''),
+                'telefono' => (string)($p['telefono'] ?? ''),
+                'rol' => (string)($p['rol'] ?? 'Abogado'),
+                'password' => '',
+                'isAdmin' => (bool)($p['isAdmin'] ?? false),
+                'activo' => (bool)($p['activo'] ?? true),
+                'createdAt' => $p['createdAt'] ?? null,
+                'updatedAt' => $row['updated_at'] ?? null,
+            ];
+        }
+        return $users;
+    }
 }
 
 function replaceUsers(PDO $pdo, array $users): void {
+    // Compatibilidad con servidores MySQL/MariaDB que tengan tabla legacy.
+    $existing = $pdo->query("SHOW COLUMNS FROM `abogapp2_users`")->fetchAll(PDO::FETCH_ASSOC);
+    $existingNames = array_map(static fn($c) => (string)$c['Field'], $existing);
+    $requiredCols = [
+        'email' => "ALTER TABLE `abogapp2_users` ADD COLUMN `email` VARCHAR(190) NOT NULL DEFAULT ''",
+        'nombre' => "ALTER TABLE `abogapp2_users` ADD COLUMN `nombre` VARCHAR(190) NOT NULL DEFAULT ''",
+        'telefono' => "ALTER TABLE `abogapp2_users` ADD COLUMN `telefono` VARCHAR(50) DEFAULT ''",
+        'role' => "ALTER TABLE `abogapp2_users` ADD COLUMN `role` VARCHAR(80) DEFAULT 'Abogado'",
+        'password_hash' => "ALTER TABLE `abogapp2_users` ADD COLUMN `password_hash` VARCHAR(255) NOT NULL DEFAULT ''",
+        'is_admin' => "ALTER TABLE `abogapp2_users` ADD COLUMN `is_admin` TINYINT(1) NOT NULL DEFAULT 0",
+        'active' => "ALTER TABLE `abogapp2_users` ADD COLUMN `active` TINYINT(1) NOT NULL DEFAULT 1",
+        'created_at' => "ALTER TABLE `abogapp2_users` ADD COLUMN `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP",
+    ];
+    foreach ($requiredCols as $col => $ddl) {
+        if (!in_array($col, $existingNames, true)) $pdo->exec($ddl);
+    }
+
     $pdo->exec("DELETE FROM `abogapp2_users`");
     $stmt = $pdo->prepare("INSERT INTO `abogapp2_users`
       (id, email, nombre, telefono, role, password_hash, is_admin, active, created_at, updated_at)
@@ -186,9 +226,15 @@ try {
             echo json_encode(['ok' => false, 'error' => 'Debe enviar email y password.']);
             exit;
         }
-        $stmt = $pdo->prepare("SELECT id, email, nombre, telefono, role, is_admin, active, created_at, updated_at, password_hash FROM `abogapp2_users` WHERE LOWER(email) = :email LIMIT 1");
-        $stmt->execute(['email' => $email]);
-        $user = $stmt->fetch();
+        try {
+            $stmt = $pdo->prepare("SELECT id, email, nombre, telefono, role, is_admin, active, created_at, updated_at, password_hash FROM `abogapp2_users` WHERE LOWER(email) = :email LIMIT 1");
+            $stmt->execute(['email' => $email]);
+            $user = $stmt->fetch();
+        } catch (Throwable $e) {
+            http_response_code(409);
+            echo json_encode(['ok' => false, 'error' => 'La tabla de usuarios está en formato legado. Ejecute una escritura (push) para migrarla.']);
+            exit;
+        }
         if (!$user || !(int)$user['active'] || !password_verify($password, (string)$user['password_hash'])) {
             http_response_code(401);
             echo json_encode(['ok' => false, 'error' => 'Credenciales inválidas.']);
