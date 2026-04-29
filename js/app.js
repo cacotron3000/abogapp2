@@ -20,6 +20,10 @@ function loadState(){
 }
 function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 let syncMessageTimer = null;
+let autoSyncTimer = null;
+let isPullingFromDb = false;
+let isPushingToDb = false;
+const AUTO_SYNC_DELAY_MS = 900;
 function showSyncMessage(message, isError = false){
   clearTimeout(syncMessageTimer);
   const subtitle = $('#viewSubtitle');
@@ -44,6 +48,8 @@ async function apiSync(action, payload = {}){
   return data;
 }
 async function pullFromCpanelDb(){
+  if(isPullingFromDb) return;
+  isPullingFromDb = true;
   try{
     const data = await apiSync('pull');
     if(!data.state){ showSyncMessage('No hay datos guardados aún en DB cPanel.'); return; }
@@ -55,9 +61,13 @@ async function pullFromCpanelDb(){
     console.error(err);
     alert(`No fue posible leer la base de datos: ${err.message}`);
     showSyncMessage('Error al leer desde DB cPanel.', true);
+  }finally{
+    isPullingFromDb = false;
   }
 }
 async function pushToCpanelDb(){
+  if(isPushingToDb || isPullingFromDb) return;
+  isPushingToDb = true;
   try{
     await apiSync('push', { state });
     showSyncMessage('Datos escritos en DB cPanel correctamente.');
@@ -65,7 +75,13 @@ async function pushToCpanelDb(){
     console.error(err);
     alert(`No fue posible escribir en la base de datos: ${err.message}`);
     showSyncMessage('Error al escribir en DB cPanel.', true);
+  }finally{
+    isPushingToDb = false;
   }
+}
+function queueAutoPushToCpanel(){
+  clearTimeout(autoSyncTimer);
+  autoSyncTimer = setTimeout(() => { pushToCpanelDb(); }, AUTO_SYNC_DELAY_MS);
 }
 function normalizeState(){
   state.cotizaciones = (state.cotizaciones || []).map(c => ({ ...c, numero: Number(c.numero) || 0 }));
@@ -121,6 +137,7 @@ function showApp(){
   $('#appShell').classList.remove('hidden');
   updateSidebarUserName();
   renderAll();
+  pullFromCpanelDb();
 }
 if(state.session) showApp();
 
@@ -134,6 +151,7 @@ function switchView(view){
   };
   $('#viewTitle').textContent = titles[view][0]; $('#viewSubtitle').textContent = titles[view][1];
   renderAll();
+  pullFromCpanelDb();
 }
 
 $$('[data-open-modal]').forEach(btn => btn.addEventListener('click', () => openModal(btn.dataset.openModal)));
@@ -294,8 +312,9 @@ function upsert(collection, item){
   if(ix>=0) state[collection][ix] = { ...state[collection][ix], ...item };
   else state[collection].push(item);
   log(`${ix>=0?'Actualizó':'Creó'} registro en ${collection}`); renderAll();
+  queueAutoPushToCpanel();
 }
-function removeItem(collection,id){ if(!confirm('¿Eliminar este registro?')) return; state[collection]=state[collection].filter(x=>x.id!==id); log(`Eliminó registro en ${collection}`); renderAll(); }
+function removeItem(collection,id){ if(!confirm('¿Eliminar este registro?')) return; state[collection]=state[collection].filter(x=>x.id!==id); log(`Eliminó registro en ${collection}`); renderAll(); queueAutoPushToCpanel(); }
 window.removeItem = removeItem;
 function completeAsunto(id){
   const asunto = state.asuntos.find(a=>a.id===id);
@@ -308,6 +327,7 @@ function completeAsunto(id){
   asunto.completedAt = new Date().toISOString();
   log('Marcó asunto como completado y archivado');
   renderAll();
+  queueAutoPushToCpanel();
 }
 function completeTarea(id){
   const tarea = state.tareas.find(t=>t.id===id);
@@ -318,6 +338,7 @@ function completeTarea(id){
   tarea.completedAt = new Date().toISOString();
   log('Marcó tarea como completada y archivada');
   renderAll();
+  queueAutoPushToCpanel();
 }
 function completePlazo(id){
   const plazo = state.plazos.find(p=>p.id===id);
@@ -328,6 +349,7 @@ function completePlazo(id){
   plazo.completedAt = new Date().toISOString();
   log('Marcó plazo como cumplido y archivado');
   renderAll();
+  queueAutoPushToCpanel();
 }
 function completeCausa(id){
   const causa = state.causas.find(c=>c.id===id);
@@ -340,6 +362,7 @@ function completeCausa(id){
   causa.completedAt = new Date().toISOString();
   log('Marcó causa judicial como completada y archivada');
   renderAll();
+  queueAutoPushToCpanel();
 }
 function detailItem(label, value){ return `<div class="detail-item"><span>${safe(label)}</span><strong>${safe(value || '—')}</strong></div>`; }
 function openClienteDetalle(id){
