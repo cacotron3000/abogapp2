@@ -28,9 +28,6 @@ function normalizeState(){
   state.plazos = (state.plazos || []).map(p => ({ ...p, tipoDias: p.tipoDias || 'Judiciales', responsableIds: asArray(p.responsableIds || p.responsableId), archivado: p.archivado || p.estado === 'Cumplido' || p.estado === 'Archivado' }));
   saveState();
 }
-const SYNC_API_BASE = localStorage.getItem('sync_api_base') || 'http://localhost:3001';
-const SYNC_API_KEY = localStorage.getItem('sync_api_key') || 'dYNcXEgHBE7InHUJUknl6CF28zIlQJt8';
-
 function setSyncStatus(text, type='idle'){
   const el = $('#syncStatus');
   if(!el) return;
@@ -39,30 +36,29 @@ function setSyncStatus(text, type='idle'){
   el.classList.add(`sync-${type}`);
 }
 
+async function pullall(){
+  return window.SyncAPI.pullall();
+}
+async function pulltabla(table){
+  return window.SyncAPI.pulltabla(table);
+}
 async function refreshSyncStatus(){
   if(!state.session) return;
   try{
-    const res = await fetch(`${SYNC_API_BASE}/sync/status`, { headers: { 'x-api-key': SYNC_API_KEY } });
-    if(!res.ok) throw new Error('No se pudo consultar estado');
-    const data = await res.json();
-    const sync = data?.sync || {};
-    if(sync.running) return setSyncStatus('Estado sync: sincronizando…', 'running');
-    if(sync.lastError) return setSyncStatus(`Estado sync: error (${sync.lastError})`, 'error');
-    if(sync.lastSyncAt) return setSyncStatus(`Estado sync: OK (${new Date(sync.lastSyncAt).toLocaleString('es-CL')})`, 'ok');
-    setSyncStatus('Estado sync: sin historial', 'idle');
+    const data = await pulltabla('abogapp_users');
+    setSyncStatus(`Estado sync: OK (${(data.rows||[]).length} usuarios)`, 'ok');
   }catch(e){
-    setSyncStatus('Estado sync: backend no disponible', 'error');
+    setSyncStatus(`Estado sync: error (${e.message})`, 'error');
   }
 }
 
 async function forceSync(){
   setSyncStatus('Estado sync: sincronizando…', 'running');
   try{
-    const res = await fetch(`${SYNC_API_BASE}/sync/run`, { method:'POST', headers: { 'x-api-key': SYNC_API_KEY } });
-    if(!res.ok) throw new Error('No se pudo forzar sincronización');
-    await refreshSyncStatus();
+    const data = await pullall();
+    setSyncStatus(`Estado sync: OK (${Object.keys(data.tables||{}).length} tablas)`, 'ok');
   }catch(e){
-    setSyncStatus('Estado sync: error al forzar sincronización', 'error');
+    setSyncStatus('Estado sync: error al sincronizar', 'error');
   }
 }
 
