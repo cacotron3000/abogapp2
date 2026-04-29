@@ -67,7 +67,9 @@ function fetchCollection(PDO $pdo, string $table): array {
 }
 
 function replaceCollection(PDO $pdo, string $table, array $items): void {
-    $pdo->exec("TRUNCATE TABLE `{$table}`");
+    // Usar DELETE en vez de TRUNCATE para evitar commit implícito en MySQL
+    // mientras estamos dentro de una transacción activa.
+    $pdo->exec("DELETE FROM `{$table}`");
     $stmt = $pdo->prepare("INSERT INTO `{$table}` (id, payload) VALUES (:id, :payload)");
     foreach ($items as $item) {
         if (!is_array($item)) {
