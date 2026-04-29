@@ -20,7 +20,7 @@ La aplicación sigue funcionando en frontend HTML/JS, y ahora incluye backend en
    - `dbname`
    - `user`
    - `pass`
-   - opcionalmente `table` y `state_key`
+   - opcionalmente `table_prefix`
 
 ### 2) Botones de sincronización
 En la barra superior hay dos acciones:
@@ -33,4 +33,16 @@ En la barra superior hay dos acciones:
   - `{ "action": "pull" }`
   - `{ "action": "push", "state": { ... } }`
 
-La tabla se autocrea si no existe (`abogapp_state` por defecto), almacenando el JSON del estado de la aplicación.
+### 4) Estructura en MySQL (por sección)
+El backend crea tablas separadas por sección usando `table_prefix`:
+- `${table_prefix}_users`
+- `${table_prefix}_clientes`
+- `${table_prefix}_asuntos`
+- `${table_prefix}_causas` (incluye audiencias dentro de cada causa, por ejemplo `proximaAudiencia`)
+- `${table_prefix}_tareas`
+- `${table_prefix}_plazos`
+- `${table_prefix}_cotizaciones`
+- `${table_prefix}_logs`
+- `${table_prefix}_meta` (sesión)
+
+Cada registro se guarda por `id` y `payload` JSON, permitiendo persistencia por tabla para cada módulo de la app.
