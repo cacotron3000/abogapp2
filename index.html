@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AbogApp 2.0</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <section id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <img src="assets/logo-gj.png" alt="Gorroño Jara Abogados" class="login-logo" />
+      <h1>AbogApp 2.0</h1>
+      <p>Gestión interna para oficina de abogados</p>
+      <form id="loginForm">
+        <label>Correo</label>
+        <input type="email" id="loginEmail" value="admin@gjabogados.cl" required />
+        <label>Contraseña</label>
+        <input type="password" id="loginPassword" value="admin123" required />
+        <button type="submit">Ingresar</button>
+      </form>
+      <small>Usuario demo: admin@gjabogados.cl / admin123</small>
+    </div>
+  </section>
+
+  <section id="appShell" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <img src="assets/logo-gj.png" alt="Gorroño Jara Abogados" class="sidebar-logo" />
+        <div id="sidebarUserName" class="sidebar-user-name">Usuario</div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="dashboard">Dashboard</button>
+        <button class="nav-item" data-view="clientes">Clientes</button>
+        <button class="nav-item" data-view="asuntos">Asuntos</button>
+        <button class="nav-item" data-view="causas">Causas judiciales</button>
+        <button class="nav-item" data-view="tareas">Tareas</button>
+        <button class="nav-item" data-view="plazos">Plazos</button>
+        <button class="nav-item" data-view="archivo">Archivo</button>
+        <button class="nav-item" data-view="usuarios">Usuarios</button>
+      </nav>
+      <button id="logoutBtn" class="logout-btn">Cerrar sesión</button>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-title-wrap">
+          <h2 id="viewTitle">Dashboard</h2>
+          <p id="viewSubtitle">Resumen operativo del estudio</p>
+        </div>
+        <div class="topbar-actions">
+          <button id="seedBtn" class="secondary-btn">Cargar datos demo</button>
+          <button id="importBtn" class="secondary-btn">Importar JSON</button>
+          <input id="importFile" type="file" accept="application/json,.json" hidden />
+          <button id="exportBtn" class="secondary-btn">Exportar JSON</button>
+        </div>
+      </header>
+
+      <section id="dashboardView" class="view active-view"></section>
+
+      <section id="clientesView" class="view">
+        <div class="section-header">
+          <div>
+            <h3>Clientes</h3>
+            <p>Personas naturales, empresas, sindicatos e instituciones.</p>
+          </div>
+          <button class="primary-btn" data-open-modal="clienteModal">Nuevo cliente</button>
+        </div>
+        <div class="toolbar"><input id="clienteSearch" placeholder="Buscar cliente por nombre, RUT o correo..." /></div>
+        <div id="clientesList" class="cards-grid"></div>
+      </section>
+
+      <section id="asuntosView" class="view">
+        <div class="section-header">
+          <div>
+            <h3>Asuntos</h3>
+            <p>Centro de gestión para asuntos judiciales y extrajudiciales.</p>
+          </div>
+          <button class="primary-btn" data-open-modal="asuntoModal">Nuevo asunto</button>
+        </div>
+        <div class="toolbar"><input id="asuntoSearch" placeholder="Buscar asunto, materia, cliente o estado..." /></div>
+        <div id="asuntosList" class="cards-grid"></div>
+      </section>
+
+      <section id="causasView" class="view">
+        <div class="section-header">
+          <div>
+            <h3>Causas judiciales</h3>
+            <p>Control de tribunal, RIT/ROL, carátula, etapa y estado procesal.</p>
+          </div>
+          <button class="primary-btn" data-open-modal="causaModal">Nueva causa</button>
+        </div>
+        <div class="toolbar"><input id="causaSearch" placeholder="Buscar causa por tribunal, RIT, ROL o carátula..." /></div>
+        <div id="causasList" class="table-wrap"></div>
+      </section>
+
+      <section id="tareasView" class="view">
+        <div class="section-header">
+          <div>
+            <h3>Tareas</h3>
+            <p>Responsables, vencimientos y prioridad.</p>
+          </div>
+          <button class="primary-btn" data-open-modal="tareaModal">Nueva tarea</button>
+        </div>
+        <div id="kanban" class="kanban"></div>
+      </section>
+
+      <section id="plazosView" class="view">
+        <div class="section-header">
+          <div>
+            <h3>Plazos</h3>
+            <p>Cálculo y control referencial de vencimientos.</p>
+          </div>
+          <button class="primary-btn" data-open-modal="plazoModal">Nuevo plazo</button>
+        </div>
+        <div id="plazosList" class="table-wrap"></div>
+      </section>
+
+      <section id="archivoView" class="view"></section>
+
+      <section id="usuariosView" class="view">
+        <div class="section-header">
+          <div>
+            <h3>Usuarios</h3>
+            <p>Equipo interno del estudio.</p>
+          </div>
+          <button class="primary-btn" data-open-modal="usuarioModal">Nuevo usuario</button>
+        </div>
+        <div id="usuariosList" class="cards-grid"></div>
+      </section>
+    </main>
+  </section>
+
+  <div id="modalBackdrop" class="modal-backdrop hidden"></div>
+
+  <dialog id="clienteModal" class="modal">
+    <form id="clienteForm" method="dialog">
+      <h3>Nuevo cliente</h3>
+      <input type="hidden" id="clienteId" />
+      <div class="form-grid">
+        <label>Tipo<select id="clienteTipo"><option>Persona natural</option><option>Empresa</option><option>Sindicato</option><option>Institución</option></select></label>
+        <label>Nombre<input id="clienteNombre" required /></label>
+        <label>RUT<input id="clienteRut" placeholder="12.345.678-9" /></label>
+        <label>Correo<input id="clienteCorreo" type="email" /></label>
+        <label>Teléfono<input id="clienteTelefono" /></label>
+        <label>Comuna<input id="clienteComuna" /></label>
+        <label>Región<input id="clienteRegion" value="Coquimbo" /></label>
+        <label>Estado<select id="clienteEstado"><option>Activo</option><option>Potencial</option><option>Inactivo</option><option>Cerrado</option></select></label>
+        <label class="wide">Observaciones<textarea id="clienteObs"></textarea></label>
+      </div>
+      <div class="modal-actions"><button type="button" class="secondary-btn close-modal">Cancelar</button><button class="primary-btn">Guardar</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="clienteDetalleModal" class="modal detail-modal">
+    <div class="detail-panel">
+      <div class="detail-header">
+        <div>
+          <span id="detalleClienteEstado" class="badge ok">Activo</span>
+          <h3 id="detalleClienteNombre">Detalle del cliente</h3>
+          <p id="detalleClienteSubtitulo">Ficha completa</p>
+        </div>
+        <div class="detail-actions">
+          <button type="button" id="editarClienteBtn" class="primary-btn">Editar información</button>
+          <button type="button" class="secondary-btn close-modal">Cerrar</button>
+        </div>
+      </div>
+      <div id="clienteDetalleContenido" class="detail-content"></div>
+    </div>
+  </dialog>
+
+  <dialog id="entidadDetalleModal" class="modal detail-modal">
+    <div class="detail-panel">
+      <div class="detail-header">
+        <div>
+          <span id="detalleEntidadEstado" class="badge ok">Detalle</span>
+          <h3 id="detalleEntidadTitulo">Detalle</h3>
+          <p id="detalleEntidadSubtitulo">Ficha completa</p>
+        </div>
+        <div id="detalleEntidadAcciones" class="detail-actions"></div>
+      </div>
+      <div id="entidadDetalleContenido" class="detail-content"></div>
+    </div>
+  </dialog>
+
+  <dialog id="asuntoModal" class="modal">
+    <form id="asuntoForm" method="dialog">
+      <h3>Nuevo asunto</h3>
+      <input type="hidden" id="asuntoId" />
+      <div class="form-grid">
+        <label>Cliente<select id="asuntoCliente" required></select></label>
+        <label>Nombre del asunto<input id="asuntoNombre" required /></label>
+        <label>Tipo<select id="asuntoTipo"><option>Judicial</option><option>Extrajudicial</option></select></label>
+        <label>Área<select id="asuntoArea"><option>Laboral</option><option>Civil</option><option>Familia</option><option>Policía Local</option><option>Corte de Apelaciones</option><option>Corte Suprema</option><option>Otro</option></select></label>
+        <label>Materia<input id="asuntoMateria" /></label>
+        <label>Prioridad<select id="asuntoPrioridad"><option>Baja</option><option>Media</option><option>Alta</option><option>Urgente</option></select></label>
+        <label>Estado<select id="asuntoEstado"><option>Nuevo</option><option>En análisis</option><option>En preparación</option><option>Activo</option><option>En espera</option><option>Terminado</option><option>Archivado</option></select></label>
+        <label>Responsable(s)<select id="asuntoResponsable" multiple></select><small>Puede seleccionar uno o más responsables.</small></label>
+        <label class="wide">Observaciones<textarea id="asuntoObs"></textarea></label>
+      </div>
+      <div class="modal-actions"><button type="button" class="secondary-btn close-modal">Cancelar</button><button class="primary-btn">Guardar</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="causaModal" class="modal">
+    <form id="causaForm" method="dialog">
+      <h3>Nueva causa judicial</h3>
+      <input type="hidden" id="causaId" />
+      <div class="form-grid">
+        <label>Cliente opcional<select id="causaClienteFiltro"><option value="">Todos los clientes</option></select></label>
+        <label>Asunto judicial<select id="causaAsunto" required></select></label>
+        <label>Tribunal<input id="causaTribunal" required placeholder="Juzgado de Letras del Trabajo de La Serena" /></label>
+        <label>RIT<input id="causaRit" /></label>
+        <label>ROL<input id="causaRol" /></label>
+        <label class="wide">Carátula<input id="causaCaratula" /></label>
+        <label>Estado procesal<input id="causaEstado" placeholder="Audiencia preparatoria pendiente" /></label>
+        <label>Etapa<input id="causaEtapa" placeholder="Discusión / Prueba / Recursos" /></label>
+        <label>Próxima audiencia<input id="causaAudiencia" type="date" /></label>
+        <label class="wide">Link PJUD<input id="causaLink" type="url" /></label>
+      </div>
+      <div class="modal-actions"><button type="button" class="secondary-btn close-modal">Cancelar</button><button class="primary-btn">Guardar</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="tareaModal" class="modal">
+    <form id="tareaForm" method="dialog">
+      <h3>Nueva tarea</h3>
+      <input type="hidden" id="tareaId" />
+      <div class="form-grid">
+        <label>Cliente opcional<select id="tareaClienteFiltro"><option value="">Todos los clientes</option></select></label>
+        <label>Asunto<select id="tareaAsunto"></select></label>
+        <label>Título<input id="tareaTitulo" required /></label>
+        <label>Responsable(s)<select id="tareaResponsable" multiple></select><small>Puede seleccionar uno o más responsables.</small></label>
+        <label>Vencimiento<input id="tareaVencimiento" type="date" /></label>
+        <label>Prioridad<select id="tareaPrioridad"><option>Baja</option><option>Media</option><option>Alta</option><option>Urgente</option></select></label>
+        <label>Estado<select id="tareaEstado"><option>Pendiente</option><option>En proceso</option><option>Terminada</option></select></label>
+        <label class="wide">Descripción<textarea id="tareaDescripcion"></textarea></label>
+      </div>
+      <div class="modal-actions"><button type="button" class="secondary-btn close-modal">Cancelar</button><button class="primary-btn">Guardar</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="plazoModal" class="modal">
+    <form id="plazoForm" method="dialog">
+      <h3>Nuevo plazo</h3>
+      <input type="hidden" id="plazoId" />
+      <div class="form-grid">
+        <label>Cliente opcional<select id="plazoClienteFiltro"><option value="">Todos los clientes</option></select></label>
+        <label>Asunto<select id="plazoAsunto"></select></label>
+        <label>Nombre<input id="plazoNombre" required /></label>
+        <label>Inicio<input id="plazoInicio" type="date" /></label>
+        <label>Vencimiento<input id="plazoVencimiento" type="date" required /></label>
+        <label>Tipo de días<select id="plazoTipo"><option>Judiciales</option><option>Corridos</option><option>Hábiles</option></select></label>
+        <label>Responsable(s)<select id="plazoResponsable" multiple></select><small>Puede seleccionar uno o más responsables.</small></label>
+        <label>Estado<select id="plazoEstado"><option>Vigente</option><option>Cumplido</option><option>Vencido</option><option>Suspendido</option></select></label>
+        <label class="wide">Observaciones<textarea id="plazoObs"></textarea></label>
+      </div>
+      <div class="notice">El cálculo de plazos es referencial y debe ser verificado por el abogado responsable.</div>
+      <div class="modal-actions"><button type="button" class="secondary-btn close-modal">Cancelar</button><button class="primary-btn">Guardar</button></div>
+    </form>
+  </dialog>
+
+
+  <dialog id="cotizacionModal" class="modal wide-modal">
+    <form id="cotizacionForm" method="dialog">
+      <h3>Generar cotización</h3>
+      <div class="notice">Formulario basado en la plantilla de propuesta de servicios. La numeración es correlativa y parte en el N° 295.</div>
+      <div class="form-grid">
+        <label>Número<input id="cotizacionNumero" type="number" readonly /></label>
+        <label>Fecha<input id="cotizacionFecha" type="date" required /></label>
+        <label>Nombre cliente<input id="cotizacionNombreCliente" required /></label>
+        <label>Mail<input id="cotizacionMail" type="email" /></label>
+        <label class="wide">Materia<input id="cotizacionMateria" required /></label>
+        <label class="wide">I. Resumen requerimiento<textarea id="cotizacionServicio" rows="4" required></textarea></label>
+        <label class="wide">II. Servicio propuesto<textarea id="cotizacionPropuesta" rows="5" required></textarea></label>
+      </div>
+      <h4 class="detail-section-title">III. Cotización</h4>
+      <div class="quote-grid" id="cotizacionConceptosGrid">
+        <strong>Concepto</strong><strong>Monto fijo</strong><strong>Monto variable/eventual</strong><span></span>
+        <div id="cotizacionConceptosContainer" class="quote-concepts-container"></div>
+      </div>
+      <button type="button" class="secondary-btn small-action" onclick="addCotizacionConcepto()">+ Agregar concepto</button>
+      <div class="notice">Al guardar se registrará la cotización y se descargará un documento Word (.docx) generado 100% desde JS, con el logo centrado en el encabezado.</div>
+      <div class="modal-actions"><button type="button" class="secondary-btn close-modal">Cancelar</button><button class="primary-btn">Guardar y descargar</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="usuarioModal" class="modal">
+    <form id="usuarioForm" method="dialog">
+      <h3>Nuevo usuario</h3>
+      <input type="hidden" id="usuarioId" />
+      <div class="form-grid">
+        <label>Nombre<input id="usuarioNombre" required /></label>
+        <label>Correo<input id="usuarioCorreo" type="email" required /></label>
+        <label>Rol<select id="usuarioRol"><option>Administrador</option><option>Abogado</option><option>Asistente</option></select></label>
+        <label>Estado<select id="usuarioActivo"><option value="true">Activo</option><option value="false">Inactivo</option></select></label>
+      </div>
+      <div class="modal-actions"><button type="button" class="secondary-btn close-modal">Cancelar</button><button class="primary-btn">Guardar</button></div>
+    </form>
+  </dialog>
+
+  <script src="js/jszip.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
