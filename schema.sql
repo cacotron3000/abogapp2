@@ -57,9 +57,7 @@ CREATE TABLE IF NOT EXISTS `abogapp_asuntos` (
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_abogapp_asuntos_cliente` (`cliente_id`),
-  KEY `idx_abogapp_asuntos_estado` (`estado`),
-  CONSTRAINT `fk_abogapp_asuntos_cliente` FOREIGN KEY (`cliente_id`) REFERENCES `abogapp_clientes` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_abogapp_asuntos_responsable` FOREIGN KEY (`responsable_id`) REFERENCES `abogapp_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+  KEY `idx_abogapp_asuntos_estado` (`estado`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `abogapp_causas` (
@@ -79,8 +77,7 @@ CREATE TABLE IF NOT EXISTS `abogapp_causas` (
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_abogapp_causas_asunto` (`asunto_id`),
-  KEY `idx_abogapp_causas_rit` (`rit`),
-  CONSTRAINT `fk_abogapp_causas_asunto` FOREIGN KEY (`asunto_id`) REFERENCES `abogapp_asuntos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+  KEY `idx_abogapp_causas_rit` (`rit`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `abogapp_tareas` (
@@ -99,9 +96,7 @@ CREATE TABLE IF NOT EXISTS `abogapp_tareas` (
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_abogapp_tareas_asunto` (`asunto_id`),
-  KEY `idx_abogapp_tareas_vencimiento` (`vencimiento`),
-  CONSTRAINT `fk_abogapp_tareas_asunto` FOREIGN KEY (`asunto_id`) REFERENCES `abogapp_asuntos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_abogapp_tareas_responsable` FOREIGN KEY (`responsable_id`) REFERENCES `abogapp_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+  KEY `idx_abogapp_tareas_vencimiento` (`vencimiento`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `abogapp_plazos` (
@@ -120,9 +115,7 @@ CREATE TABLE IF NOT EXISTS `abogapp_plazos` (
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_abogapp_plazos_asunto` (`asunto_id`),
-  KEY `idx_abogapp_plazos_vencimiento` (`vencimiento`),
-  CONSTRAINT `fk_abogapp_plazos_asunto` FOREIGN KEY (`asunto_id`) REFERENCES `abogapp_asuntos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_abogapp_plazos_responsable` FOREIGN KEY (`responsable_id`) REFERENCES `abogapp_users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+  KEY `idx_abogapp_plazos_vencimiento` (`vencimiento`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `abogapp_cotizaciones` (
