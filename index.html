@@ -39,6 +39,10 @@
         <button class="nav-item" data-view="archivo">Archivo</button>
         <button class="nav-item" data-view="usuarios">Usuarios</button>
       </nav>
+      <div class="sync-panel">
+        <button id="forceSyncBtn" class="secondary-btn sync-force-btn" type="button">Forzar sincronización</button>
+        <div id="syncStatus" class="sync-status sync-idle">Estado sync: sin verificar</div>
+      </div>
       <button id="logoutBtn" class="logout-btn">Cerrar sesión</button>
     </aside>
 
@@ -300,6 +304,7 @@
   </dialog>
 
   <script src="js/jszip.min.js"></script>
+  <script src="js/sync.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

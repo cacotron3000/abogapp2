@@ -28,6 +28,46 @@ function normalizeState(){
   state.plazos = (state.plazos || []).map(p => ({ ...p, tipoDias: p.tipoDias || 'Judiciales', responsableIds: asArray(p.responsableIds || p.responsableId), archivado: p.archivado || p.estado === 'Cumplido' || p.estado === 'Archivado' }));
   saveState();
 }
+function setSyncStatus(text, type='idle'){
+  const el = $('#syncStatus');
+  if(!el) return;
+  el.textContent = text;
+  el.classList.remove('sync-ok','sync-error','sync-running','sync-idle');
+  el.classList.add(`sync-${type}`);
+}
+
+async function pullall(){
+  return window.SyncAPI.pullall();
+}
+async function pulltabla(table){
+  return window.SyncAPI.pulltabla(table);
+}
+async function refreshSyncStatus(){
+  if(!state.session) return;
+  try{
+    const data = await pulltabla('abogapp_users');
+    setSyncStatus(`Estado sync: OK (${(data.rows||[]).length} usuarios)`, 'ok');
+  }catch(e){
+    setSyncStatus(`Estado sync: error (${e.message})`, 'error');
+  }
+}
+
+async function forceSync(){
+  setSyncStatus('Estado sync: sincronizando…', 'running');
+  try{
+    const data = await pullall();
+    const errors = data.errors || {};
+    const errorCount = Object.keys(errors).length;
+    if(errorCount){
+      const first = Object.entries(errors)[0];
+      return setSyncStatus(`Sync parcial: ${errorCount} tabla(s) con error (${first[0]})`, 'error');
+    }
+    setSyncStatus(`Estado sync: OK (${Object.keys(data.tables||{}).length} tablas)`, 'ok');
+  }catch(e){
+    setSyncStatus('Estado sync: error al sincronizar', 'error');
+  }
+}
+
 const $ = s => document.querySelector(s);
 const safe = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const $$ = s => Array.from(document.querySelectorAll(s));
@@ -60,6 +100,7 @@ $('#loginForm').addEventListener('submit', e => {
   showApp();
 });
 $('#logoutBtn').addEventListener('click', () => { state.session = null; saveState(); location.reload(); });
+$('#forceSyncBtn')?.addEventListener('click', forceSync);
 
 function updateSidebarUserName(){
   const el = $('#sidebarUserName');
@@ -70,6 +111,8 @@ function showApp(){
   $('#loginScreen').classList.add('hidden');
   $('#appShell').classList.remove('hidden');
   updateSidebarUserName();
+  refreshSyncStatus();
+  setInterval(refreshSyncStatus, 15000);
   renderAll();
 }
 if(state.session) showApp();
