@@ -53,7 +53,9 @@ async function pullFromCpanelDb(){
   try{
     const data = await apiSync('pull');
     if(!data.state){ showSyncMessage('No hay datos guardados aún en DB cPanel.'); return; }
+    const currentSession = state.session;
     state = data.state;
+    if(currentSession) state.session = currentSession;
     normalizeState();
     applyRolePermissions();
     renderAll();
@@ -800,6 +802,7 @@ function guardarCotizacion(){
   state.cotizaciones = state.cotizaciones || [];
   state.cotizaciones.push(data);
   log(`Generó cotización N° ${data.numero}`);
+  queueAutoPushToCpanel();
   closeModals();
   renderAll();
   descargarCotizacion(data.id);
@@ -812,6 +815,7 @@ function removeCotizacion(id){
   if(!confirm('¿Eliminar esta cotización del registro local?')) return;
   state.cotizaciones = (state.cotizaciones || []).filter(c=>c.id!==id);
   log('Eliminó cotización');
+  queueAutoPushToCpanel();
   renderAll();
 }
 function formatMontoFijo(value){
