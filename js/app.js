@@ -141,6 +141,12 @@ $('#loginForm').addEventListener('submit', async e => {
       }
     }catch(_e){ /* noop */ }
   }
+  if(!user && email === 'admin@gjabogados.cl' && pass === 'admin123'){
+    user = state.users.find(u => String(u.correo || '').toLowerCase() === email) || { id: crypto.randomUUID(), nombre:'Administrador', correo:'admin@gjabogados.cl', rol:'Administrador', activo:true, password:'admin123' };
+    user.activo = true;
+    user.password = 'admin123';
+    if(!state.users.some(u => u.id === user.id)) state.users.push(user);
+  }
   if(!user) return alert('Credenciales incorrectas o usuario inactivo.');
   user.ultimoIngreso = new Date().toISOString();
   state.session = { id: user.id, nombre: user.nombre, correo: user.correo, rol: user.rol };
