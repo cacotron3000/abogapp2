@@ -216,8 +216,11 @@ $('#perfilEliminarFotoBtn')?.addEventListener('click', () => {
 });
 $('#perfilForm')?.addEventListener('submit', e => {
   e.preventDefault();
-  const u = currentUser();
-  if(!u) return;
+  let u = currentUser();
+  if(!u && state.session){
+    u = { id: state.session.id, nombre: state.session.nombre, correo: state.session.correo, rol: state.session.rol, activo: true, password: '' };
+  }
+  if(!u){ alert('No se pudo identificar el usuario actual.'); return; }
   const p1 = $('#perfilPassword').value;
   const p2 = $('#perfilPassword2').value;
   if((p1 || p2) && p1 !== p2){ alert('Las contraseñas no coinciden.'); return; }
@@ -228,6 +231,9 @@ $('#perfilForm')?.addEventListener('submit', e => {
   updateSidebarUserName();
   clearModalDraft('perfilModal');
   closeModals();
+});
+$('#perfilGuardarBtn')?.addEventListener('click', () => {
+  $('#perfilForm')?.requestSubmit();
 });
 function isAdminSession(){
   const rol = String(state.session?.rol || '').toLowerCase();
