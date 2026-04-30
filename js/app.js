@@ -91,6 +91,8 @@ function normalizeState(){
   state.tareas = (state.tareas || []).map(t => ({ ...t, responsableIds: asArray(t.responsableIds || t.responsableId), archivada: t.archivada || t.estado === 'Terminada' }));
   state.causas = (state.causas || []).map(c => ({ ...c, archivada: c.archivada || c.estadoProcesal === 'Archivada' || c.estadoProcesal === 'Terminada' || c.estadoProcesal === 'Cumplida' }));
   state.plazos = (state.plazos || []).map(p => ({ ...p, tipoDias: p.tipoDias || 'Judiciales', responsableIds: asArray(p.responsableIds || p.responsableId), archivado: p.archivado || p.estado === 'Cumplido' || p.estado === 'Archivado' }));
+  state.sugerencias = state.sugerencias || { asuntoNombres: [], asuntoMaterias: [] };
+  state.formDrafts = state.formDrafts || {};
   saveState();
 }
 const $ = s => document.querySelector(s);
@@ -212,9 +214,42 @@ function openModal(id){
       passInput.placeholder = '';
     }
   }
+  restoreModalDraft(id);
+  refreshAsuntoSugerencias();
   $('#modalBackdrop').classList.remove('hidden'); $(`#${id}`).showModal();
 }
 function closeModals(){ $$('.modal').forEach(m=>m.close()); $('#modalBackdrop').classList.add('hidden'); }
+function draftFormSelector(modalId){ return `#${modalId} input, #${modalId} select, #${modalId} textarea`; }
+function captureModalDraft(modalId){
+  state.formDrafts = state.formDrafts || {};
+  const data = {};
+  $$(`${draftFormSelector(modalId)}`).forEach(el => {
+    if(!el.id) return;
+    if(el.type === 'hidden') return;
+    data[el.id] = el.multiple ? Array.from(el.selectedOptions).map(o=>o.value) : el.value;
+  });
+  state.formDrafts[modalId] = data;
+  saveState();
+}
+function restoreModalDraft(modalId){
+  const draft = state.formDrafts?.[modalId];
+  if(!draft) return;
+  Object.entries(draft).forEach(([id,val]) => setField(`#${id}`, val));
+}
+function clearModalDraft(modalId){
+  if(state.formDrafts?.[modalId]){
+    delete state.formDrafts[modalId];
+    saveState();
+  }
+}
+function refreshAsuntoSugerencias(){
+  const nombres = Array.from(new Set([...(state.sugerencias?.asuntoNombres || []), ...state.asuntos.map(a=>a.nombre).filter(Boolean)])).slice(0,200);
+  const materias = Array.from(new Set([...(state.sugerencias?.asuntoMaterias || []), ...state.asuntos.map(a=>a.materia).filter(Boolean)])).slice(0,200);
+  const nombreList = $('#asuntoNombreSugerencias');
+  const materiaList = $('#asuntoMateriaSugerencias');
+  if(nombreList) nombreList.innerHTML = nombres.map(v=>`<option value="${safe(v)}"></option>`).join('');
+  if(materiaList) materiaList.innerHTML = materias.map(v=>`<option value="${safe(v)}"></option>`).join('');
+}
 
 $$('.modal').forEach(m => {
   m.addEventListener('click', e => {
@@ -351,6 +386,10 @@ document.addEventListener('change', e => {
     if(wrap) wrap.classList.toggle('hidden', e.target.value !== 'Otro');
   }
 });
+document.addEventListener('input', e => {
+  const modal = e.target.closest?.('.modal');
+  if(modal?.id) captureModalDraft(modal.id);
+});
 $('#addAudienciaBtn')?.addEventListener('click', () => addAudienciaRow());
 document.addEventListener('click', e => {
   if(e.target.classList?.contains('remove-audiencia')){
@@ -404,13 +443,16 @@ function nextAudiencia(causa){
 const cotizacionForm = $('#cotizacionForm');
 if(cotizacionForm) cotizacionForm.addEventListener('submit', e => { e.preventDefault(); guardarCotizacion(); });
 
-$('#clienteForm').addEventListener('submit', e=>{ e.preventDefault(); upsert('clientes', { id: $('#clienteId').value || crypto.randomUUID(), tipo: $('#clienteTipo').value, nombre: $('#clienteNombre').value, rut: $('#clienteRut').value, correo: $('#clienteCorreo').value, telefono: $('#clienteTelefono').value, comuna: $('#clienteComuna').value, region: $('#clienteRegion').value, estado: $('#clienteEstado').value, observaciones: $('#clienteObs').value, createdAt: new Date().toISOString() }); closeModals(); });
+$('#clienteForm').addEventListener('submit', e=>{ e.preventDefault(); upsert('clientes', { id: $('#clienteId').value || crypto.randomUUID(), tipo: $('#clienteTipo').value, nombre: $('#clienteNombre').value, rut: $('#clienteRut').value, correo: $('#clienteCorreo').value, telefono: $('#clienteTelefono').value, comuna: $('#clienteComuna').value, region: $('#clienteRegion').value, estado: $('#clienteEstado').value, observaciones: $('#clienteObs').value, createdAt: new Date().toISOString() }); clearModalDraft('clienteModal'); closeModals(); });
 $('#asuntoForm').addEventListener('submit', e=>{ 
   e.preventDefault();
   const asuntoId = $('#asuntoId').value || crypto.randomUUID();
   const tipo = $('#asuntoTipo').value;
   const responsables = getSelectedValues('#asuntoResponsable');
   upsert('asuntos', { id: asuntoId, clienteId: $('#asuntoCliente').value, nombre: $('#asuntoNombre').value, tipo, area: $('#asuntoArea').value, materia: $('#asuntoMateria').value, prioridad: $('#asuntoPrioridad').value, estado: $('#asuntoEstado').value, responsableIds: responsables, responsableId: responsables[0] || '', observaciones: $('#asuntoObs').value, fechaIngreso: todayISO(), archivado: ['Terminado','Archivado'].includes($('#asuntoEstado').value) });
+  state.sugerencias.asuntoNombres = Array.from(new Set([$('#asuntoNombre').value, ...(state.sugerencias.asuntoNombres || [])])).filter(Boolean).slice(0,200);
+  state.sugerencias.asuntoMaterias = Array.from(new Set([$('#asuntoMateria').value, ...(state.sugerencias.asuntoMaterias || [])])).filter(Boolean).slice(0,200);
+  refreshAsuntoSugerencias();
   if(tipo === 'Judicial'){
     const existing = state.causas.find(c => c.asuntoId === asuntoId);
     const audiencias = $('#asuntoCausaAudiencia').value ? [{ id: crypto.randomUUID(), tipo:'Preparatoria', otro:'', fecha: $('#asuntoCausaAudiencia').value, hora:'' }] : [];
@@ -418,17 +460,17 @@ $('#asuntoForm').addEventListener('submit', e=>{
   } else {
     state.causas = state.causas.filter(c => c.asuntoId !== asuntoId);
   }
-  closeModals();
+  clearModalDraft('asuntoModal'); closeModals();
 });
 $('#causaForm').addEventListener('submit', e=>{ 
   e.preventDefault();
   const audiencias = getCausaAudienciasFromForm();
   const prox = audiencias.filter(a=>a.fecha).sort((a,b)=>(`${a.fecha}T${a.hora||'00:00'}`).localeCompare(`${b.fecha}T${b.hora||'00:00'}`))[0];
   upsert('causas', { id: $('#causaId').value || crypto.randomUUID(), asuntoId: $('#causaAsunto').value, tribunal: $('#causaTribunal').value, rit: $('#causaRit').value, rol: $('#causaRol').value, caratula: $('#causaCaratula').value, estadoProcesal: $('#causaEstado').value, etapa: $('#causaEtapa').value, audiencias, proximaAudiencia: prox?.fecha || '', link: $('#causaLink').value, ultimaActuacion: todayISO() }); 
-  closeModals(); 
+  clearModalDraft('causaModal'); closeModals(); 
 });
-$('#tareaForm').addEventListener('submit', e=>{ e.preventDefault(); const responsables = getSelectedValues('#tareaResponsable'); upsert('tareas', { id: $('#tareaId').value || crypto.randomUUID(), asuntoId: $('#tareaAsunto').value, titulo: $('#tareaTitulo').value, responsableIds: responsables, responsableId: responsables[0] || '', vencimiento: $('#tareaVencimiento').value, prioridad: $('#tareaPrioridad').value, estado: $('#tareaEstado').value, descripcion: $('#tareaDescripcion').value, archivada: $('#tareaEstado').value === 'Terminada' }); closeModals(); });
-$('#plazoForm').addEventListener('submit', e=>{ e.preventDefault(); const responsables = getSelectedValues('#plazoResponsable'); upsert('plazos', { id: $('#plazoId').value || crypto.randomUUID(), asuntoId: $('#plazoAsunto').value, nombre: $('#plazoNombre').value, inicio: $('#plazoInicio').value || tomorrowISO(), vencimiento: $('#plazoVencimiento').value, tipoDias: $('#plazoTipo').value || 'Judiciales', responsableIds: responsables, responsableId: responsables[0] || '', estado: $('#plazoEstado').value, observaciones: $('#plazoObs').value }); closeModals(); });
+$('#tareaForm').addEventListener('submit', e=>{ e.preventDefault(); const responsables = getSelectedValues('#tareaResponsable'); upsert('tareas', { id: $('#tareaId').value || crypto.randomUUID(), asuntoId: $('#tareaAsunto').value, titulo: $('#tareaTitulo').value, responsableIds: responsables, responsableId: responsables[0] || '', vencimiento: $('#tareaVencimiento').value, prioridad: $('#tareaPrioridad').value, estado: $('#tareaEstado').value, descripcion: $('#tareaDescripcion').value, archivada: $('#tareaEstado').value === 'Terminada' }); clearModalDraft('tareaModal'); closeModals(); });
+$('#plazoForm').addEventListener('submit', e=>{ e.preventDefault(); const responsables = getSelectedValues('#plazoResponsable'); upsert('plazos', { id: $('#plazoId').value || crypto.randomUUID(), asuntoId: $('#plazoAsunto').value, nombre: $('#plazoNombre').value, inicio: $('#plazoInicio').value || tomorrowISO(), vencimiento: $('#plazoVencimiento').value, tipoDias: $('#plazoTipo').value || 'Judiciales', responsableIds: responsables, responsableId: responsables[0] || '', estado: $('#plazoEstado').value, observaciones: $('#plazoObs').value }); clearModalDraft('plazoModal'); closeModals(); });
 $('#usuarioForm').addEventListener('submit', e=>{ 
   e.preventDefault();
   const existing = state.users.find(u => u.id === $('#usuarioId').value);
@@ -438,7 +480,7 @@ $('#usuarioForm').addEventListener('submit', e=>{
     return;
   }
   upsert('users', { id: $('#usuarioId').value || crypto.randomUUID(), nombre: $('#usuarioNombre').value, correo: $('#usuarioCorreo').value, rol: $('#usuarioRol').value, activo: $('#usuarioActivo').value === 'true', password: plainPassword || existing?.password || '' });
-  closeModals();
+  clearModalDraft('usuarioModal'); closeModals();
 });
 
 function upsert(collection, item){
@@ -633,7 +675,7 @@ window.descargarCotizacion = descargarCotizacion;
 window.removeCotizacion = removeCotizacion;
 window.addCotizacionConcepto = addCotizacionConcepto;
 
-function renderAll(){ hydrateSelects(); renderDashboard(); renderClientes(); renderAsuntos(); renderCausas(); renderTareas(); renderPlazos(); renderArchivo(); renderUsuarios(); }
+function renderAll(){ hydrateSelects(); refreshAsuntoSugerencias(); renderDashboard(); renderClientes(); renderAsuntos(); renderCausas(); renderTareas(); renderPlazos(); renderArchivo(); renderUsuarios(); }
 
 function renderDashboard(){
   const dueSoon = state.plazos.filter(p=>asuntoActivo(p.asuntoId) && plazoActivo(p) && p.estado==='Vigente' && daysUntil(p.vencimiento) !== null && daysUntil(p.vencimiento) <= 7).length;

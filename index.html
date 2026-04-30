@@ -203,9 +203,9 @@
       <div class="form-grid">
         <label>Tipo<select id="asuntoTipo"><option>Judicial</option><option>Extrajudicial</option></select></label>
         <label>Cliente<select id="asuntoCliente" required></select></label>
-        <label>Nombre del asunto<input id="asuntoNombre" required /></label>
+        <label>Nombre del asunto<input id="asuntoNombre" list="asuntoNombreSugerencias" required /></label>
         <label>Área<select id="asuntoArea"><option>Laboral</option><option>Civil</option><option>Familia</option><option>Policía Local</option><option>Corte de Apelaciones</option><option>Corte Suprema</option><option>Otro</option></select></label>
-        <label>Materia<input id="asuntoMateria" /></label>
+        <label>Materia<input id="asuntoMateria" list="asuntoMateriaSugerencias" /></label>
         <label>Prioridad<select id="asuntoPrioridad"><option>Baja</option><option>Media</option><option>Alta</option><option>Urgente</option></select></label>
         <label>Estado<select id="asuntoEstado"><option>Nuevo</option><option>En análisis</option><option>En preparación</option><option>Activo</option><option>En espera</option><option>Terminado</option><option>Archivado</option></select></label>
         <label>Responsable(s)<select id="asuntoResponsable" multiple></select><small>Puede seleccionar uno o más responsables.</small></label>
@@ -222,6 +222,8 @@
       <div class="modal-actions"><button type="button" class="secondary-btn close-modal">Cancelar</button><button class="primary-btn">Guardar</button></div>
     </form>
   </dialog>
+  <datalist id="asuntoNombreSugerencias"></datalist>
+  <datalist id="asuntoMateriaSugerencias"></datalist>
 
   <dialog id="causaModal" class="modal">
     <form id="causaForm" method="dialog">
