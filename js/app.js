@@ -187,11 +187,17 @@ $('#perfilFotoBtn')?.addEventListener('click', () => $('#perfilFoto')?.click());
 $('#perfilFoto')?.addEventListener('change', e => {
   const file = e.target.files?.[0];
   if(!file) return;
+  $('#perfilFotoLoading')?.classList.remove('hidden');
   const reader = new FileReader();
   reader.onload = () => {
     const preview = $('#perfilFotoPreview');
     if(preview){ preview.src = reader.result; preview.style.display='block'; }
     $('#perfilFotoBtn')?.classList.add('hidden');
+    $('#perfilFotoLoading')?.classList.add('hidden');
+  };
+  reader.onerror = () => {
+    $('#perfilFotoLoading')?.classList.add('hidden');
+    alert('No se pudo cargar la imagen.');
   };
   reader.readAsDataURL(file);
 });
@@ -214,16 +220,15 @@ $('#perfilEliminarFotoBtn')?.addEventListener('click', () => {
   $('#perfilFotoModal')?.close();
   $('#modalBackdrop').classList.add('hidden');
 });
-$('#perfilForm')?.addEventListener('submit', e => {
-  e.preventDefault();
+function handleProfileSave(){
   let u = currentUser();
   if(!u && state.session){
     u = { id: state.session.id, nombre: state.session.nombre, correo: state.session.correo, rol: state.session.rol, activo: true, password: '' };
   }
-  if(!u){ alert('No se pudo identificar el usuario actual.'); return; }
+  if(!u){ alert('No se pudo identificar el usuario actual.'); return false; }
   const p1 = $('#perfilPassword').value;
   const p2 = $('#perfilPassword2').value;
-  if((p1 || p2) && p1 !== p2){ alert('Las contraseñas no coinciden.'); return; }
+  if((p1 || p2) && p1 !== p2){ alert('Las contraseñas no coinciden.'); return false; }
   const previewSrc = $('#perfilFotoPreview')?.src || u.fotoPerfil || '';
   upsert('users', { id: u.id, nombre: $('#perfilNombre').value, correo: $('#perfilCorreo').value, rol: u.rol, activo: u.activo, password: p1 || u.password || '', fotoPerfil: previewSrc, ultimoIngreso: u.ultimoIngreso || null });
   state.session.nombre = $('#perfilNombre').value;
@@ -231,9 +236,12 @@ $('#perfilForm')?.addEventListener('submit', e => {
   updateSidebarUserName();
   clearModalDraft('perfilModal');
   closeModals();
-});
-$('#perfilGuardarBtn')?.addEventListener('click', () => {
-  $('#perfilForm')?.requestSubmit();
+  return true;
+}
+$('#perfilForm')?.addEventListener('submit', e => { e.preventDefault(); handleProfileSave(); });
+$('#perfilGuardarBtn')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  handleProfileSave();
 });
 function isAdminSession(){
   const rol = String(state.session?.rol || '').toLowerCase();
