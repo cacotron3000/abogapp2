@@ -195,7 +195,9 @@ $('#perfilFoto')?.addEventListener('change', e => {
   };
   reader.readAsDataURL(file);
 });
-$('#perfilFotoPreview')?.addEventListener('click', () => {
+$('#perfilFotoPreview')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
   const src = $('#perfilFotoPreview')?.src;
   if(!src) return;
   $('#perfilFotoFull').src = src;

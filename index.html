@@ -330,11 +330,12 @@
     <form id="perfilForm" method="dialog">
       <h3>Mi perfil</h3>
       <div class="form-grid">
-        <label>Foto de perfil
+        <div>
+          <span>Foto de perfil</span>
           <input id="perfilFoto" type="file" accept="image/*" hidden />
           <button type="button" id="perfilFotoBtn" class="secondary-btn">Subir foto</button>
           <img id="perfilFotoPreview" alt="Foto de perfil" class="perfil-foto" style="display:none;" />
-        </label>
+        </div>
         <label>Nombre<input id="perfilNombre" required /></label>
         <label>Correo<input id="perfilCorreo" type="email" required /></label>
         <label>Rol<input id="perfilRol" disabled /></label>
