@@ -986,7 +986,7 @@ async function descargarCotizacion(id){
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Propuesta N° ${c.numero} - ${wordSafeFileName(c.nombreCliente)}.docx`;
+    a.download = `N${c.numero} ${wordSafeFileName(c.nombreCliente)}.docx`;
     document.body.appendChild(a);
     a.click();
     a.remove();
