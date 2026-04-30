@@ -106,6 +106,13 @@ function getResponsableNames(item){ const ids = asArray(item.responsableIds || i
 function getSelectedValues(selector){ const el = $(selector); return el ? Array.from(el.selectedOptions).map(o=>o.value).filter(Boolean) : []; }
 function getCliente(id){ return state.clientes.find(x=>x.id===id); }
 function getAsunto(id){ return state.asuntos.find(x=>x.id===id); }
+function getCausaByAsuntoId(asuntoId){ return state.causas.find(c => c.asuntoId === asuntoId); }
+function asuntoDisplayName(asunto){
+  if(!asunto) return 'Sin asunto';
+  const causa = getCausaByAsuntoId(asunto.id);
+  const idCausa = causa?.rol || causa?.rit || '';
+  return idCausa ? `${asunto.nombre} (${idCausa})` : (asunto.nombre || 'Sin asunto');
+}
 function asuntoActivo(id){ const a = getAsunto(id); return !a || (!a.archivado && !['Archivado','Terminado'].includes(a.estado)); }
 function causaActiva(c){ return c && !c.archivada && !['Archivada','Terminada','Cumplida'].includes(c.estadoProcesal); }
 function plazoActivo(p){ return p && !p.archivado && !['Cumplido','Archivado'].includes(p.estado); }
@@ -254,9 +261,9 @@ function hydrateAsuntoSelectsByCliente(){
   const plazoAsuntos = activeAsuntosForSelect({ clienteId: plazoCliente });
   const causaAsuntos = activeAsuntosForSelect({ clienteId: causaCliente, judicialOnly: true });
 
-  if($('#tareaAsunto')) $('#tareaAsunto').innerHTML = buildOptions(tareaAsuntos, a=>`${a.nombre} · ${getCliente(a.clienteId)?.nombre || 'Sin cliente'}`, 'Cree un asunto primero');
-  if($('#plazoAsunto')) $('#plazoAsunto').innerHTML = buildOptions(plazoAsuntos, a=>`${a.nombre} · ${getCliente(a.clienteId)?.nombre || 'Sin cliente'}`, 'Cree un asunto primero');
-  if($('#causaAsunto')) $('#causaAsunto').innerHTML = buildOptions(causaAsuntos, a=>`${a.nombre} · ${getCliente(a.clienteId)?.nombre || 'Sin cliente'}`, 'Cree un asunto judicial primero');
+  if($('#tareaAsunto')) $('#tareaAsunto').innerHTML = buildOptions(tareaAsuntos, a=>`${asuntoDisplayName(a)} · ${getCliente(a.clienteId)?.nombre || 'Sin cliente'}`, 'Cree un asunto primero');
+  if($('#plazoAsunto')) $('#plazoAsunto').innerHTML = buildOptions(plazoAsuntos, a=>`${asuntoDisplayName(a)} · ${getCliente(a.clienteId)?.nombre || 'Sin cliente'}`, 'Cree un asunto primero');
+  if($('#causaAsunto')) $('#causaAsunto').innerHTML = buildOptions(causaAsuntos, a=>`${asuntoDisplayName(a)} · ${getCliente(a.clienteId)?.nombre || 'Sin cliente'}`, 'Cree un asunto judicial primero');
 
   refreshSearchableSelects();
 }
@@ -944,7 +951,7 @@ function renderAsuntos(){
   const q = ($('#asuntoSearch')?.value || '').toLowerCase();
   const items = state.asuntos.filter(a=>!a.archivado && !['Archivado','Terminado'].includes(a.estado)).filter(a=>[a.nombre,a.materia,a.estado,a.area,getCliente(a.clienteId)?.nombre].join(' ').toLowerCase().includes(q));
   const archivados = state.asuntos.filter(a=>a.archivado || ['Archivado','Terminado'].includes(a.estado)).length;
-  $('#asuntosList').innerHTML = (items.map(a=>`<article class="entity-card clickable-card" onclick="openAsuntoDetalle('${a.id}')"><span class="badge ${badgeClass(a.prioridad)}">${safe(a.prioridad)}</span><h4>${safe(a.nombre)}</h4><p>${safe(a.tipo)} · ${safe(a.area)} · ${safe(a.materia || 'Sin materia')}</p><p>Cliente: ${safe(getCliente(a.clienteId)?.nombre || 'Sin cliente')}</p><p>Responsable: ${safe(getResponsableNames(a) || 'Sin responsable')}</p><p>Estado: <strong>${safe(a.estado)}</strong></p><div class="card-actions"><button class="mini-btn" onclick="event.stopPropagation(); openAsuntoDetalle('${a.id}')">Ver detalle</button><button class="mini-btn ok-btn" onclick="event.stopPropagation(); completeAsunto('${a.id}')">Completar y archivar</button><button class="mini-btn danger" onclick="event.stopPropagation(); removeItem('asuntos','${a.id}')">Eliminar</button></div></article>`).join('') || '<div class="empty">Sin asuntos activos registrados.</div>') + (archivados ? `<div class="archive-note">${archivados} asunto(s) completado(s) y archivado(s). No se muestran en la vista activa.</div>` : '');
+  $('#asuntosList').innerHTML = (items.map(a=>`<article class="entity-card clickable-card" onclick="openAsuntoDetalle('${a.id}')"><span class="badge ${badgeClass(a.prioridad)}">${safe(a.prioridad)}</span><h4>${safe(asuntoDisplayName(a))}</h4><p>${safe(a.tipo)} · ${safe(a.area)} · ${safe(a.materia || 'Sin materia')}</p><p>Cliente: ${safe(getCliente(a.clienteId)?.nombre || 'Sin cliente')}</p><p>Responsable: ${safe(getResponsableNames(a) || 'Sin responsable')}</p><p>Estado: <strong>${safe(a.estado)}</strong></p><div class="card-actions"><button class="mini-btn" onclick="event.stopPropagation(); openAsuntoDetalle('${a.id}')">Ver detalle</button><button class="mini-btn ok-btn" onclick="event.stopPropagation(); completeAsunto('${a.id}')">Completar y archivar</button><button class="mini-btn danger" onclick="event.stopPropagation(); removeItem('asuntos','${a.id}')">Eliminar</button></div></article>`).join('') || '<div class="empty">Sin asuntos activos registrados.</div>') + (archivados ? `<div class="archive-note">${archivados} asunto(s) completado(s) y archivado(s). No se muestran en la vista activa.</div>` : '');
 }
 function renderCausas(){
   const q = ($('#causaSearch')?.value || '').toLowerCase();
