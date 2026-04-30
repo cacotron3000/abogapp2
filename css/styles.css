@@ -154,3 +154,5 @@ select.ss-native{display:none!important}
 .audiencias-container{display:grid;gap:10px;margin:8px 0}
 .audiencia-row{display:grid;grid-template-columns:1.2fr 1fr 1fr auto;gap:8px;align-items:end}
 .topbar-app-brand,.topbar-logo{display:none!important}
+.sidebar{overflow-y:auto}
+.sync-status{white-space:normal;word-break:break-word;line-height:1.25}
