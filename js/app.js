@@ -173,15 +173,17 @@ function openProfileModal(){
   setField('#perfilPassword', '');
   setField('#perfilPassword2', '');
   const preview = $('#perfilFotoPreview');
+  const uploadBtn = $('#perfilFotoBtn');
   if(preview){
-    if(u.fotoPerfil){ preview.src = u.fotoPerfil; preview.style.display='block'; }
-    else { preview.style.display='none'; preview.removeAttribute('src'); }
+    if(u.fotoPerfil){ preview.src = u.fotoPerfil; preview.style.display='block'; if(uploadBtn) uploadBtn.classList.add('hidden'); }
+    else { preview.style.display='none'; preview.removeAttribute('src'); if(uploadBtn) uploadBtn.classList.remove('hidden'); }
   }
   const activas = state.asuntos.filter(a => !a.archivado && (a.responsableIds||[]).includes(u.id)).length;
   const tareasPendientes = state.tareas.filter(t => !t.archivada && t.estado !== 'Terminada' && (t.responsableIds||[]).includes(u.id)).length;
   const plazosProximos = state.plazos.filter(p => !p.archivado && daysUntil(p.vencimiento) !== null && daysUntil(p.vencimiento) <= 7 && (p.responsableIds||[]).includes(u.id)).length;
   $('#perfilStats').innerHTML = `Asuntos activos: <strong>${activas}</strong> · Tareas pendientes: <strong>${tareasPendientes}</strong> · Plazos próximos (7 días): <strong>${plazosProximos}</strong><br>Último ingreso: <strong>${u.ultimoIngreso ? new Date(u.ultimoIngreso).toLocaleString('es-CL') : 'Sin registro'}</strong>`;
 }
+$('#perfilFotoBtn')?.addEventListener('click', () => $('#perfilFoto')?.click());
 $('#perfilFoto')?.addEventListener('change', e => {
   const file = e.target.files?.[0];
   if(!file) return;
@@ -189,8 +191,26 @@ $('#perfilFoto')?.addEventListener('change', e => {
   reader.onload = () => {
     const preview = $('#perfilFotoPreview');
     if(preview){ preview.src = reader.result; preview.style.display='block'; }
+    $('#perfilFotoBtn')?.classList.add('hidden');
   };
   reader.readAsDataURL(file);
+});
+$('#perfilFotoPreview')?.addEventListener('click', () => {
+  const src = $('#perfilFotoPreview')?.src;
+  if(!src) return;
+  $('#perfilFotoFull').src = src;
+  $('#modalBackdrop').classList.remove('hidden');
+  $('#perfilFotoModal')?.showModal();
+});
+$('#perfilCambiarFotoBtn')?.addEventListener('click', () => $('#perfilFoto')?.click());
+$('#perfilEliminarFotoBtn')?.addEventListener('click', () => {
+  const preview = $('#perfilFotoPreview');
+  if(preview){ preview.removeAttribute('src'); preview.style.display='none'; }
+  const fileInput = $('#perfilFoto');
+  if(fileInput) fileInput.value = '';
+  $('#perfilFotoBtn')?.classList.remove('hidden');
+  $('#perfilFotoModal')?.close();
+  $('#modalBackdrop').classList.add('hidden');
 });
 $('#perfilForm')?.addEventListener('submit', e => {
   e.preventDefault();

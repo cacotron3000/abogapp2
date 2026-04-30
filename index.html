@@ -331,8 +331,9 @@
       <h3>Mi perfil</h3>
       <div class="form-grid">
         <label>Foto de perfil
-          <input id="perfilFoto" type="file" accept="image/*" />
-          <img id="perfilFotoPreview" alt="Foto de perfil" style="max-width:120px;border-radius:12px;margin-top:8px;display:none;" />
+          <input id="perfilFoto" type="file" accept="image/*" hidden />
+          <button type="button" id="perfilFotoBtn" class="secondary-btn">Subir foto</button>
+          <img id="perfilFotoPreview" alt="Foto de perfil" class="perfil-foto" style="display:none;" />
         </label>
         <label>Nombre<input id="perfilNombre" required /></label>
         <label>Correo<input id="perfilCorreo" type="email" required /></label>
@@ -343,6 +344,18 @@
       <div id="perfilStats" class="notice"></div>
       <div class="modal-actions"><button type="button" class="secondary-btn close-modal">Cerrar</button><button class="primary-btn">Guardar cambios</button></div>
     </form>
+  </dialog>
+
+  <dialog id="perfilFotoModal" class="modal">
+    <div class="detail-panel">
+      <h3>Foto de perfil</h3>
+      <img id="perfilFotoFull" alt="Foto ampliada" class="perfil-foto-full" />
+      <div class="modal-actions">
+        <button type="button" id="perfilCambiarFotoBtn" class="primary-btn">Cambiar foto</button>
+        <button type="button" id="perfilEliminarFotoBtn" class="danger-btn">Eliminar foto</button>
+        <button type="button" class="secondary-btn close-modal">Cerrar</button>
+      </div>
+    </div>
   </dialog>
 
   <script src="js/jszip.min.js"></script>
