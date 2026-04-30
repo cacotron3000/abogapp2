@@ -41,6 +41,8 @@ function ensureTables(PDO $pdo, string $prefix): array {
       `telefono` VARCHAR(50) DEFAULT '',
       `role` VARCHAR(80) DEFAULT 'Abogado',
       `password_hash` VARCHAR(255) NOT NULL,
+      `photo_url` LONGTEXT NULL,
+      `last_login` TIMESTAMP NULL DEFAULT NULL,
       `is_admin` TINYINT(1) NOT NULL DEFAULT 0,
       `active` TINYINT(1) NOT NULL DEFAULT 1,
       `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
@@ -82,7 +84,7 @@ function fetchCollection(PDO $pdo, string $table): array {
 
 function fetchUsers(PDO $pdo): array {
     try {
-        $rows = $pdo->query("SELECT id, email, nombre, telefono, role, password_hash, is_admin, active, created_at, updated_at FROM `abogapp2_users`")->fetchAll(PDO::FETCH_ASSOC);
+        $rows = $pdo->query("SELECT id, email, nombre, telefono, role, password_hash, photo_url, last_login, is_admin, active, created_at, updated_at FROM `abogapp2_users`")->fetchAll(PDO::FETCH_ASSOC);
         return array_map(static function (array $row): array {
             return [
                 'id' => (string)($row['id'] ?? ''),
@@ -91,6 +93,8 @@ function fetchUsers(PDO $pdo): array {
                 'telefono' => (string)($row['telefono'] ?? ''),
                 'rol' => (string)($row['role'] ?? 'Abogado'),
                 'password' => '',
+                'fotoPerfil' => (string)($row['photo_url'] ?? ''),
+                'ultimoIngreso' => $row['last_login'] ?? null,
                 'isAdmin' => (bool)($row['is_admin'] ?? 0),
                 'activo' => (bool)($row['active'] ?? 1),
                 'createdAt' => $row['created_at'] ?? null,
@@ -131,6 +135,8 @@ function replaceUsers(PDO $pdo, array $users): void {
         'telefono' => "ALTER TABLE `abogapp2_users` ADD COLUMN `telefono` VARCHAR(50) DEFAULT ''",
         'role' => "ALTER TABLE `abogapp2_users` ADD COLUMN `role` VARCHAR(80) DEFAULT 'Abogado'",
         'password_hash' => "ALTER TABLE `abogapp2_users` ADD COLUMN `password_hash` VARCHAR(255) NOT NULL DEFAULT ''",
+        'photo_url' => "ALTER TABLE `abogapp2_users` ADD COLUMN `photo_url` LONGTEXT NULL",
+        'last_login' => "ALTER TABLE `abogapp2_users` ADD COLUMN `last_login` TIMESTAMP NULL DEFAULT NULL",
         'is_admin' => "ALTER TABLE `abogapp2_users` ADD COLUMN `is_admin` TINYINT(1) NOT NULL DEFAULT 0",
         'active' => "ALTER TABLE `abogapp2_users` ADD COLUMN `active` TINYINT(1) NOT NULL DEFAULT 1",
         'created_at' => "ALTER TABLE `abogapp2_users` ADD COLUMN `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP",
@@ -147,9 +153,9 @@ function replaceUsers(PDO $pdo, array $users): void {
 
     $pdo->exec("DELETE FROM `abogapp2_users`");
     $stmt = $pdo->prepare("INSERT INTO `abogapp2_users`
-      (id, email, nombre, telefono, role, password_hash, is_admin, active, created_at, updated_at)
+      (id, email, nombre, telefono, role, password_hash, photo_url, last_login, is_admin, active, created_at, updated_at)
       VALUES
-      (:id, :email, :nombre, :telefono, :role, :password_hash, :is_admin, :active, :created_at, :updated_at)");
+      (:id, :email, :nombre, :telefono, :role, :password_hash, :photo_url, :last_login, :is_admin, :active, :created_at, :updated_at)");
 
     foreach ($users as $user) {
         if (!is_array($user) || empty($user['id'])) continue;
@@ -166,6 +172,8 @@ function replaceUsers(PDO $pdo, array $users): void {
             'telefono' => (string)($user['telefono'] ?? ''),
             'role' => $rol,
             'password_hash' => $passwordHash,
+            'photo_url' => (string)($user['fotoPerfil'] ?? ''),
+            'last_login' => $user['ultimoIngreso'] ?? null,
             'is_admin' => (int)(($user['isAdmin'] ?? null) ? 1 : ($rol === 'Administrador' ? 1 : 0)),
             'active' => (int)(($user['activo'] ?? true) ? 1 : 0),
             'created_at' => $user['createdAt'] ?? null,
@@ -236,7 +244,7 @@ try {
             exit;
         }
         try {
-            $stmt = $pdo->prepare("SELECT id, email, nombre, telefono, role, is_admin, active, created_at, updated_at, password_hash FROM `abogapp2_users` WHERE LOWER(email) = :email LIMIT 1");
+            $stmt = $pdo->prepare("SELECT id, email, nombre, telefono, role, is_admin, active, created_at, updated_at, password_hash, photo_url, last_login FROM `abogapp2_users` WHERE LOWER(email) = :email LIMIT 1");
             $stmt->execute(['email' => $email]);
             $user = $stmt->fetch();
         } catch (Throwable $e) {
@@ -251,12 +259,15 @@ try {
             echo json_encode(['ok' => false, 'error' => 'Credenciales inválidas.']);
             exit;
         }
+        $pdo->prepare("UPDATE `abogapp2_users` SET last_login = CURRENT_TIMESTAMP WHERE id = :id")->execute(['id' => $user['id']]);
         echo json_encode(['ok' => true, 'user' => [
             'id' => (string)$user['id'],
             'correo' => (string)$user['email'],
             'nombre' => (string)$user['nombre'],
             'telefono' => (string)($user['telefono'] ?? ''),
             'rol' => (string)$user['role'],
+            'fotoPerfil' => (string)($user['photo_url'] ?? ''),
+            'ultimoIngreso' => $user['last_login'] ?? null,
             'isAdmin' => (bool)$user['is_admin'],
             'activo' => (bool)$user['active'],
             'createdAt' => $user['created_at'] ?? null,

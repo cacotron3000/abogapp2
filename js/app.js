@@ -142,6 +142,7 @@ $('#loginForm').addEventListener('submit', async e => {
     }catch(_e){ /* noop */ }
   }
   if(!user) return alert('Credenciales incorrectas o usuario inactivo.');
+  user.ultimoIngreso = new Date().toISOString();
   state.session = { id: user.id, nombre: user.nombre, correo: user.correo, rol: user.rol };
   saveState();
   showApp();
@@ -149,11 +150,57 @@ $('#loginForm').addEventListener('submit', async e => {
 $('#logoutBtn').addEventListener('click', () => { state.session = null; saveState(); location.reload(); });
 $('#syncPullBtn')?.addEventListener('click', pullFromCpanelDb);
 $('#syncPushBtn')?.addEventListener('click', pushToCpanelDb);
+$('#sidebarUserName')?.addEventListener('click', openProfileModal);
 
 function updateSidebarUserName(){
   const el = $('#sidebarUserName');
   if(el) el.textContent = state.session?.nombre || state.session?.correo || 'Usuario';
 }
+function currentUser(){ return state.users.find(u => u.id === state.session?.id); }
+function openProfileModal(){
+  const u = currentUser();
+  if(!u) return;
+  openModal('perfilModal');
+  setField('#perfilNombre', u.nombre);
+  setField('#perfilCorreo', u.correo);
+  setField('#perfilRol', u.rol);
+  setField('#perfilPassword', '');
+  setField('#perfilPassword2', '');
+  const preview = $('#perfilFotoPreview');
+  if(preview){
+    if(u.fotoPerfil){ preview.src = u.fotoPerfil; preview.style.display='block'; }
+    else { preview.style.display='none'; preview.removeAttribute('src'); }
+  }
+  const activas = state.asuntos.filter(a => !a.archivado && (a.responsableIds||[]).includes(u.id)).length;
+  const tareasPendientes = state.tareas.filter(t => !t.archivada && t.estado !== 'Terminada' && (t.responsableIds||[]).includes(u.id)).length;
+  const plazosProximos = state.plazos.filter(p => !p.archivado && daysUntil(p.vencimiento) !== null && daysUntil(p.vencimiento) <= 7 && (p.responsableIds||[]).includes(u.id)).length;
+  $('#perfilStats').innerHTML = `Asuntos activos: <strong>${activas}</strong> · Tareas pendientes: <strong>${tareasPendientes}</strong> · Plazos próximos (7 días): <strong>${plazosProximos}</strong><br>Último ingreso: <strong>${u.ultimoIngreso ? new Date(u.ultimoIngreso).toLocaleString('es-CL') : 'Sin registro'}</strong>`;
+}
+$('#perfilFoto')?.addEventListener('change', e => {
+  const file = e.target.files?.[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const preview = $('#perfilFotoPreview');
+    if(preview){ preview.src = reader.result; preview.style.display='block'; }
+  };
+  reader.readAsDataURL(file);
+});
+$('#perfilForm')?.addEventListener('submit', e => {
+  e.preventDefault();
+  const u = currentUser();
+  if(!u) return;
+  const p1 = $('#perfilPassword').value;
+  const p2 = $('#perfilPassword2').value;
+  if((p1 || p2) && p1 !== p2){ alert('Las contraseñas no coinciden.'); return; }
+  const previewSrc = $('#perfilFotoPreview')?.src || u.fotoPerfil || '';
+  upsert('users', { id: u.id, nombre: $('#perfilNombre').value, correo: $('#perfilCorreo').value, rol: u.rol, activo: u.activo, password: p1 || u.password || '', fotoPerfil: previewSrc, ultimoIngreso: u.ultimoIngreso || null });
+  state.session.nombre = $('#perfilNombre').value;
+  state.session.correo = $('#perfilCorreo').value;
+  updateSidebarUserName();
+  clearModalDraft('perfilModal');
+  closeModals();
+});
 function isAdminSession(){
   const rol = String(state.session?.rol || '').toLowerCase();
   return rol === 'administrador' || rol === 'admin';

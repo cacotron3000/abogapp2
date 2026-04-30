@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS `abogapp2_users` (
   `telefono` VARCHAR(50) DEFAULT '',
   `role` VARCHAR(80) DEFAULT 'Abogado',
   `password_hash` VARCHAR(255) NOT NULL,
+  `photo_url` LONGTEXT NULL,
+  `last_login` TIMESTAMP NULL DEFAULT NULL,
   `is_admin` TINYINT(1) NOT NULL DEFAULT 0,
   `active` TINYINT(1) NOT NULL DEFAULT 1,
   `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,

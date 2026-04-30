@@ -27,7 +27,7 @@
     <aside class="sidebar">
       <div class="sidebar-brand">
         <img src="assets/logo-gj.png" alt="Gorroño Jara Abogados" class="sidebar-logo" />
-        <div id="sidebarUserName" class="sidebar-user-name">Usuario</div>
+        <button id="sidebarUserName" type="button" class="sidebar-user-name profile-trigger">Usuario</button>
       </div>
       <nav class="nav">
         <button class="nav-item active" data-view="dashboard">Dashboard</button>
@@ -323,6 +323,25 @@
         <label>Estado<select id="usuarioActivo"><option value="true">Activo</option><option value="false">Inactivo</option></select></label>
       </div>
       <div class="modal-actions"><button type="button" class="secondary-btn close-modal">Cancelar</button><button class="primary-btn">Guardar</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="perfilModal" class="modal">
+    <form id="perfilForm" method="dialog">
+      <h3>Mi perfil</h3>
+      <div class="form-grid">
+        <label>Foto de perfil
+          <input id="perfilFoto" type="file" accept="image/*" />
+          <img id="perfilFotoPreview" alt="Foto de perfil" style="max-width:120px;border-radius:12px;margin-top:8px;display:none;" />
+        </label>
+        <label>Nombre<input id="perfilNombre" required /></label>
+        <label>Correo<input id="perfilCorreo" type="email" required /></label>
+        <label>Rol<input id="perfilRol" disabled /></label>
+        <label>Nueva contraseña<input id="perfilPassword" type="password" minlength="6" placeholder="Opcional" /></label>
+        <label>Confirmar contraseña<input id="perfilPassword2" type="password" minlength="6" placeholder="Opcional" /></label>
+      </div>
+      <div id="perfilStats" class="notice"></div>
+      <div class="modal-actions"><button type="button" class="secondary-btn close-modal">Cerrar</button><button class="primary-btn">Guardar cambios</button></div>
     </form>
   </dialog>
 
