@@ -152,7 +152,7 @@ select.ss-native{display:none!important}
 .sidebar-user-name{font-size:.9rem;font-weight:800;color:var(--principal-dark);line-height:1.25;margin-top:2px;max-width:220px;word-break:break-word}
 .profile-trigger{background:transparent;border:0;padding:0;cursor:pointer;text-align:center}
 .sidebar-user-wrap{display:flex;align-items:center;gap:8px;justify-content:center}
-.sidebar-user-photo{width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}
+.sidebar-user-photo{width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}
 .perfil-foto{width:110px;height:110px;border-radius:50%;object-fit:cover;border:2px solid var(--border);margin-top:8px;cursor:pointer}
 .sync-status{margin-top:10px;font-size:.82rem;color:var(--muted);background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:8px 10px;text-align:center}
 .audiencias-container{display:grid;gap:10px;margin:8px 0}
