@@ -65,8 +65,10 @@ async function pullFromCpanelDb(){
     const data = await apiSync('pull');
     if(!data.state){ showSyncMessage('No hay datos guardados aún en DB cPanel.'); return; }
     const currentSession = state.session;
+    const currentUi = state.ui;
     state = data.state;
     if(currentSession) state.session = currentSession;
+    if(!state.ui && currentUi) state.ui = currentUi;
     normalizeState();
     applyRolePermissions();
     renderAll();
@@ -322,7 +324,6 @@ function switchView(view){
   };
   $('#viewTitle').textContent = titles[view][0]; $('#viewSubtitle').textContent = titles[view][1];
   renderAll();
-  pullFromCpanelDb();
 }
 
 $$('[data-open-modal]').forEach(btn => btn.addEventListener('click', () => openModal(btn.dataset.openModal)));
