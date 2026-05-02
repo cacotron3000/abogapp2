@@ -47,6 +47,16 @@ async function apiSync(action, payload = {}){
   if(!res.ok || !data.ok) throw new Error(data.error || `Error HTTP ${res.status}`);
   return data;
 }
+async function apiNotify(action, payload = {}){
+  const res = await fetch('backend/notify.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...payload })
+  });
+  const data = await res.json().catch(()=>({ ok:false, error:'Respuesta inválida del servidor de correo' }));
+  if(!res.ok || !data.ok) throw new Error(data.error || `Error HTTP ${res.status}`);
+  return data;
+}
 async function pullFromCpanelDb(){
   if(isPullingFromDb) return;
   isPullingFromDb = true;
@@ -603,11 +613,31 @@ $('#usuarioForm').addEventListener('submit', e=>{
 });
 
 function upsert(collection, item){
+  const prev = state[collection].find(x=>x.id===item.id) || null;
   const ix = state[collection].findIndex(x=>x.id===item.id);
   if(ix>=0) state[collection][ix] = { ...state[collection][ix], ...item };
   else state[collection].push(item);
+  notifyNewAssignments(collection, prev, state[collection].find(x=>x.id===item.id));
   log(`${ix>=0?'Actualizó':'Creó'} registro en ${collection}`); renderAll();
   queueAutoPushToCpanel();
+}
+function notifyNewAssignments(collection, prevItem, nextItem){
+  if(!['asuntos','tareas','plazos'].includes(collection) || !nextItem) return;
+  const prevIds = new Set(asArray(prevItem?.responsableIds || prevItem?.responsableId));
+  const nextIds = asArray(nextItem.responsableIds || nextItem.responsableId).filter(Boolean);
+  const added = nextIds.filter(id => !prevIds.has(id));
+  const itemName = nextItem.nombre || nextItem.titulo || 'Registro';
+  const itemType = collection === 'asuntos' ? 'Asunto' : collection === 'tareas' ? 'Tarea' : 'Plazo';
+  added.forEach(async uid => {
+    const user = getUser(uid);
+    if(!user?.correo) return;
+    try{
+      await apiNotify('assignment_notice', { to: user.correo, member: user.nombre, itemType, itemName, assignedBy: state.session?.nombre || state.session?.correo || 'sistema' });
+      showSyncMessage(`Correo enviado a ${user.nombre}`);
+    }catch(err){
+      console.warn('No se pudo enviar correo de asignación', err);
+    }
+  });
 }
 function removeItem(collection,id){ if(!confirm('¿Eliminar este registro?')) return; state[collection]=state[collection].filter(x=>x.id!==id); log(`Eliminó registro en ${collection}`); renderAll(); queueAutoPushToCpanel(); }
 window.removeItem = removeItem;
@@ -867,7 +897,7 @@ function applyTemplate(kind){
 function renderUtilidades(){
   const t = state.templates || { asuntos:[], tareas:[], plazos:[] };
   $('#templatesPanel').innerHTML = `<h3>Plantillas reutilizables</h3><p>Guarda formatos base para asuntos, tareas y plazos.</p>
-    <div class="toolbar"><button class="secondary-btn" onclick="saveCurrentAsTemplate('asunto')">Guardar asunto actual como plantilla</button><button class="secondary-btn" onclick="saveCurrentAsTemplate('tarea')">Guardar tarea actual como plantilla</button><button class="secondary-btn" onclick="saveCurrentAsTemplate('plazo')">Guardar plazo actual como plantilla</button></div>
+    <div class="toolbar"><button class="secondary-btn" onclick="saveCurrentAsTemplate('asunto')">Guardar asunto actual como plantilla</button><button class="secondary-btn" onclick="saveCurrentAsTemplate('tarea')">Guardar tarea actual como plantilla</button><button class="secondary-btn" onclick="saveCurrentAsTemplate('plazo')">Guardar plazo actual como plantilla</button><button class="secondary-btn" onclick="sendDailyTaskReminders()">Enviar recordatorio diario ahora</button></div>
     <p>Asuntos: ${t.asuntos.length} · Tareas: ${t.tareas.length} · Plazos: ${t.plazos.length}</p>`;
   $('#actividadPanel').innerHTML = `<h3>Actividad del equipo</h3><div class="toolbar"><input id="activityUserFilter" placeholder="Filtrar por correo usuario..." /><input id="activityDateFilter" type="date" /></div><div class="list">${renderActividadList()}</div>`;
   $('#notificacionesPanel').innerHTML = `<h3>Notificaciones internas</h3><div class="list">${renderAlertList()}</div>`;
@@ -893,6 +923,21 @@ function saveCurrentAsTemplate(kind){
   saveState(); renderAll();
 }
 window.saveCurrentAsTemplate = saveCurrentAsTemplate;
+async function sendDailyTaskReminders(){
+  const usersPayload = state.users.filter(u=>u.activo && u.correo).map(u => ({
+    nombre: u.nombre,
+    correo: u.correo,
+    tasks: state.tareas.filter(t => !t.archivada && t.estado !== 'Terminada' && asArray(t.responsableIds || t.responsableId).includes(u.id)).map(t => ({ titulo: t.titulo, vencimiento: t.vencimiento || 'Sin fecha' }))
+  }));
+  try{
+    const result = await apiNotify('daily_reminder', { users: usersPayload });
+    alert(`Recordatorios enviados: ${result.sent || 0}`);
+    log(`Envió recordatorio diario de tareas (${result.sent || 0} correos)`);
+  }catch(err){
+    alert(`No se pudo enviar recordatorio diario: ${err.message}`);
+  }
+}
+window.sendDailyTaskReminders = sendDailyTaskReminders;
 function openDashboardAlert(tipo, id){
   if(tipo === 'plazo') return openPlazoDetalle(id);
   if(tipo === 'tarea') return openTareaDetalle(id);
