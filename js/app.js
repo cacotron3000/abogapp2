@@ -161,6 +161,12 @@ $('#sidebarUserName')?.addEventListener('click', openProfileModal);
 function updateSidebarUserName(){
   const el = $('#sidebarUserName');
   if(el) el.textContent = state.session?.nombre || state.session?.correo || 'Usuario';
+  const photo = $('#sidebarUserPhoto');
+  const u = currentUser();
+  if(photo){
+    if(u?.fotoPerfil){ photo.src = u.fotoPerfil; photo.classList.remove('hidden'); }
+    else { photo.removeAttribute('src'); photo.classList.add('hidden'); }
+  }
 }
 function currentUser(){ return state.users.find(u => u.id === state.session?.id); }
 function resizeProfileImage(dataUrl, maxSize = 512){
@@ -191,6 +197,7 @@ function openProfileModal(){
   setField('#perfilPassword2', '');
   const preview = $('#perfilFotoPreview');
   const uploadBtn = $('#perfilFotoBtn');
+  $('#perfilFotoMenu')?.classList.add('hidden');
   if(preview){
     if(u.fotoPerfil){ preview.src = u.fotoPerfil; preview.style.display='block'; if(uploadBtn) uploadBtn.classList.add('hidden'); }
     else { preview.style.display='none'; preview.removeAttribute('src'); if(uploadBtn) uploadBtn.classList.remove('hidden'); }
@@ -222,11 +229,8 @@ $('#perfilFoto')?.addEventListener('change', e => {
 $('#perfilFotoPreview')?.addEventListener('click', (e) => {
   e.preventDefault();
   e.stopPropagation();
-  const src = $('#perfilFotoPreview')?.src;
-  if(!src) return;
-  $('#perfilFotoFull').src = src;
-  $('#modalBackdrop').classList.remove('hidden');
-  $('#perfilFotoModal')?.showModal();
+  if(!$('#perfilFotoPreview')?.src) return;
+  $('#perfilFotoMenu')?.classList.toggle('hidden');
 });
 $('#perfilCambiarFotoBtn')?.addEventListener('click', () => $('#perfilFoto')?.click());
 $('#perfilEliminarFotoBtn')?.addEventListener('click', () => {
@@ -235,8 +239,7 @@ $('#perfilEliminarFotoBtn')?.addEventListener('click', () => {
   const fileInput = $('#perfilFoto');
   if(fileInput) fileInput.value = '';
   $('#perfilFotoBtn')?.classList.remove('hidden');
-  $('#perfilFotoModal')?.close();
-  $('#modalBackdrop').classList.add('hidden');
+  $('#perfilFotoMenu')?.classList.add('hidden');
 });
 function handleProfileSave(){
   try{

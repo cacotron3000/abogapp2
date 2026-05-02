@@ -27,7 +27,10 @@
     <aside class="sidebar">
       <div class="sidebar-brand">
         <img src="assets/logo-gj.png" alt="Gorroño Jara Abogados" class="sidebar-logo" />
-        <button id="sidebarUserName" type="button" class="sidebar-user-name profile-trigger">Usuario</button>
+        <div class="sidebar-user-wrap">
+          <img id="sidebarUserPhoto" class="sidebar-user-photo hidden" alt="Foto usuario" />
+          <button id="sidebarUserName" type="button" class="sidebar-user-name profile-trigger">Usuario</button>
+        </div>
       </div>
       <nav class="nav">
         <button class="nav-item active" data-view="dashboard">Dashboard</button>
@@ -336,6 +339,10 @@
           <button type="button" id="perfilFotoBtn" class="secondary-btn">Subir foto</button>
           <small id="perfilFotoLoading" class="hidden">Cargando imagen...</small>
           <img id="perfilFotoPreview" alt="Foto de perfil" class="perfil-foto" style="display:none;" />
+          <div id="perfilFotoMenu" class="hidden" style="margin-top:8px;display:grid;gap:6px;max-width:180px;">
+            <button type="button" id="perfilCambiarFotoBtn" class="secondary-btn">Cambiar foto</button>
+            <button type="button" id="perfilEliminarFotoBtn" class="danger-btn">Eliminar foto</button>
+          </div>
         </div>
         <label>Nombre<input id="perfilNombre" required /></label>
         <label>Correo<input id="perfilCorreo" type="email" required /></label>
@@ -348,17 +355,6 @@
     </form>
   </dialog>
 
-  <dialog id="perfilFotoModal" class="modal">
-    <div class="detail-panel">
-      <h3>Foto de perfil</h3>
-      <img id="perfilFotoFull" alt="Foto ampliada" class="perfil-foto-full" />
-      <div class="modal-actions">
-        <button type="button" id="perfilCambiarFotoBtn" class="primary-btn">Cambiar foto</button>
-        <button type="button" id="perfilEliminarFotoBtn" class="danger-btn">Eliminar foto</button>
-        <button type="button" class="secondary-btn close-modal">Cerrar</button>
-      </div>
-    </div>
-  </dialog>
 
   <script src="js/jszip.min.js"></script>
   <script src="js/app.js"></script>
