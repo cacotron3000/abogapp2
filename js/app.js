@@ -1343,7 +1343,11 @@ function editUser(id){
 }
 window.editUser = editUser;
 
-['clienteSearch','asuntoSearch','causaSearch'].forEach(id => document.addEventListener('input', e => { if(e.target.id===id) renderAll(); }));
+document.addEventListener('input', e => {
+  if(e.target.id === 'clienteSearch') return renderClientes();
+  if(e.target.id === 'asuntoSearch') return renderAsuntos();
+  if(e.target.id === 'causaSearch') return renderCausas();
+});
 ['activityUserFilter','activityDateFilter'].forEach(id => document.addEventListener('input', e => { if(e.target.id===id) renderUtilidades(); }));
 ['tareaResponsableFiltro','tareaPrioridadFiltro'].forEach(id => document.addEventListener('change', e => { if(e.target.id===id) renderTareas(); }));
 $('#asuntoApplyTemplateBtn')?.addEventListener('click', ()=>applyTemplate('asunto'));
