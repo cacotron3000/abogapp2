@@ -64,3 +64,36 @@ Prioridades sugeridas para aumentar adopción diaria del equipo:
 5. **Notificaciones internas** para vencimientos, tareas sin responsable y causas sin próxima audiencia.
 
 Estas mejoras están ordenadas por impacto operativo inmediato y facilidad de adopción por parte de estudios jurídicos pequeños y medianos.
+
+## Recordatorio diario automático por correo (cron)
+
+La app permite envío manual desde **Utilidades**, pero para automatizar horario diario se incluye:
+
+- Script: `backend/cron_daily_reminder.php`
+- Fuente de datos: consulta directa a MySQL sobre:
+  - `abogapp2_users` (usuarios activos con email)
+  - `${table_prefix}_tareas` (tareas pendientes en `payload` JSON)
+
+### 1) Configuración previa
+En `backend/config.php` debe estar definido:
+- `host`, `dbname`, `user`, `pass`, `charset`, `table_prefix`
+- `mail_from` (remitente)
+
+### 2) Probar manualmente por terminal
+```bash
+php /ruta/a/abogapp/backend/cron_daily_reminder.php
+```
+
+### 3) Programar en cPanel (Cron Jobs)
+Ejemplo para ejecutar todos los días a las **08:00** (hora del servidor):
+```cron
+0 8 * * * /usr/bin/php /home/USUARIO/public_html/abogapp/backend/cron_daily_reminder.php >/dev/null 2>&1
+```
+
+### 4) Cambiar horario
+Solo modifica los primeros campos del cron:
+- `0 8 * * *` → 08:00 diario
+- `30 7 * * *` → 07:30 diario
+- `0 18 * * 1-5` → 18:00 lunes a viernes
+
+> Recomendación: verificar primero que el servidor tenga salida de correo habilitada para `mail()`.
