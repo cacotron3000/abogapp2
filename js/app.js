@@ -633,24 +633,28 @@ function handleWizardFlow(collection, item){
   if(!wizardState.enabled || !item) return;
   if(collection === 'clientes'){
     wizardState.clienteId = item.id;
-    openModal('asuntoModal');
-    setField('#asuntoCliente', item.id);
-    alert('Paso 2/3: completa el asunto. Luego crearás la primera tarea o plazo.');
+    setTimeout(() => {
+      openModal('asuntoModal');
+      setField('#asuntoCliente', item.id);
+      alert('Paso 2/3: completa el asunto. Luego crearás la primera tarea o plazo.');
+    }, 0);
     return;
   }
   if(collection === 'asuntos'){
     wizardState.asuntoId = item.id;
-    const createTask = confirm('Paso 3/3: ¿Deseas crear primero una tarea? (Cancelar = crear plazo)');
-    openModal(createTask ? 'tareaModal' : 'plazoModal');
-    if(createTask){
-      setField('#tareaClienteFiltro', item.clienteId || wizardState.clienteId || '');
-      hydrateAsuntoSelectsByCliente();
-      setField('#tareaAsunto', item.id);
-    }else{
-      setField('#plazoClienteFiltro', item.clienteId || wizardState.clienteId || '');
-      hydrateAsuntoSelectsByCliente();
-      setField('#plazoAsunto', item.id);
-    }
+    setTimeout(() => {
+      const createTask = confirm('Paso 3/3: ¿Deseas crear primero una tarea? (Cancelar = crear plazo)');
+      openModal(createTask ? 'tareaModal' : 'plazoModal');
+      if(createTask){
+        setField('#tareaClienteFiltro', item.clienteId || wizardState.clienteId || '');
+        hydrateAsuntoSelectsByCliente();
+        setField('#tareaAsunto', item.id);
+      }else{
+        setField('#plazoClienteFiltro', item.clienteId || wizardState.clienteId || '');
+        hydrateAsuntoSelectsByCliente();
+        setField('#plazoAsunto', item.id);
+      }
+    }, 0);
     return;
   }
   if(collection === 'tareas' || collection === 'plazos'){
