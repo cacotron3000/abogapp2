@@ -1289,8 +1289,10 @@ function renderTareas(){
     return `<div class="kanban-col" data-status="${est}" ondragover="event.preventDefault()" ondrop="dropTaskStatus(event,'${est}')"><h4>${est} (${items.length})</h4>${items.map(t=>{const chips=[!asArray(t.responsableIds||t.responsableId).length?'Sin responsable':'',daysUntil(t.vencimiento)===0?'Vence hoy':'',daysUntil(t.vencimiento)<0?'Atrasada':''].filter(Boolean).map(c=>`<span class="badge warn">${c}</span>`).join(' '); return `<div class="task-card clickable-card" draggable="true" ondragstart="dragTaskStatus(event,'${t.id}')" onclick="openTareaDetalle('${t.id}')"><span class="badge ${badgeClass(t.prioridad)}">${safe(t.prioridad)}</span> ${chips}<strong>${safe(t.titulo)}</strong><p>${safe(t.descripcion || 'Sin descripción')}</p><p>${safe(getAsunto(t.asuntoId)?.nombre || 'Sin asunto')}</p><p>Vence: ${fmtDate(t.vencimiento)}</p><p>Responsable(s): ${safe(getResponsableNames(t) || '-')}</p><div class="card-actions"><button class="mini-btn" onclick="event.stopPropagation(); openTareaDetalle('${t.id}')">Ver detalle</button><button class="mini-btn ok-btn" onclick="event.stopPropagation(); completeTarea('${t.id}')">Completar y archivar</button><button class="mini-btn danger" onclick="event.stopPropagation(); removeItem('tareas','${t.id}')">Eliminar</button></div></div>`;}).join('') || '<div class="empty">Sin registros.</div>'}</div>`;
   }).join('') + (archivadas ? `<div class="archive-note kanban-archive-note">${archivadas} tarea(s) completada(s) y archivada(s). No se muestran en el tablero activo.</div>` : '');
   $('#kanban').innerHTML = filterBar + $('#kanban').innerHTML;
-  setField('#tareaResponsableFiltro', responsibleFilter);
-  setField('#tareaPrioridadFiltro', priorityFilter);
+  const respEl = $('#tareaResponsableFiltro');
+  const prioEl = $('#tareaPrioridadFiltro');
+  if(respEl) respEl.value = responsibleFilter;
+  if(prioEl) prioEl.value = priorityFilter;
 }
 function dragTaskStatus(event, taskId){ event.dataTransfer.setData('text/plain', taskId); }
 function dropTaskStatus(event, status){
