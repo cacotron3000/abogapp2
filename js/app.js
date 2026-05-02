@@ -867,7 +867,7 @@ window.descargarCotizacion = descargarCotizacion;
 window.removeCotizacion = removeCotizacion;
 window.addCotizacionConcepto = addCotizacionConcepto;
 
-function renderAll(){ hydrateSelects(); refreshAsuntoSugerencias(); hydrateTemplateSelects(); renderDashboard(); renderClientes(); renderAsuntos(); renderCausas(); renderTareas(); renderPlazos(); renderArchivo(); renderUsuarios(); renderUtilidades(); }
+function renderAll(){ applyUiPreferences(); hydrateSelects(); refreshAsuntoSugerencias(); hydrateTemplateSelects(); renderDashboard(); renderClientes(); renderAsuntos(); renderCausas(); renderTareas(); renderPlazos(); renderArchivo(); renderUsuarios(); renderUtilidades(); }
 
 function renderDashboard(){
   const dueSoon = state.plazos.filter(p=>asuntoActivo(p.asuntoId) && plazoActivo(p) && p.estado==='Vigente' && daysUntil(p.vencimiento) !== null && daysUntil(p.vencimiento) <= 7).length;
