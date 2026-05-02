@@ -63,7 +63,10 @@
             <h3>Clientes</h3>
             <p>Personas naturales, empresas, sindicatos e instituciones.</p>
           </div>
-          <button class="primary-btn" data-open-modal="clienteModal">Nuevo cliente</button>
+          <div class="topbar-actions">
+            <button id="quickWizardBtn" type="button" class="secondary-btn">Wizard rápido</button>
+            <button class="primary-btn" data-open-modal="clienteModal">Nuevo cliente</button>
+          </div>
         </div>
         <div class="toolbar"><input id="clienteSearch" placeholder="Buscar cliente por nombre, RUT o correo..." /></div>
         <div id="clientesList" class="cards-grid"></div>
@@ -216,11 +219,11 @@
         <label>Estado<select id="asuntoEstado"><option>Nuevo</option><option>En análisis</option><option>En preparación</option><option>Activo</option><option>En espera</option><option>Terminado</option><option>Archivado</option></select></label>
         <label>Responsable(s)<select id="asuntoResponsable" multiple></select><small>Puede seleccionar uno o más responsables.</small></label>
         <label class="judicial-only">Tribunal<input id="asuntoCausaTribunal" placeholder="Juzgado de Letras del Trabajo de La Serena" /></label>
-        <label class="judicial-only">RIT<input id="asuntoCausaRit" /></label>
-        <label class="judicial-only">ROL<input id="asuntoCausaRol" /></label>
+        <label class="judicial-only">RIT<input id="asuntoCausaRit" title="RIT: Rol Interno de Tribunal (identificador interno de la causa)." /></label>
+        <label class="judicial-only">ROL<input id="asuntoCausaRol" title="ROL: número de rol público/externo de la causa." /></label>
         <label class="wide judicial-only">Carátula<input id="asuntoCausaCaratula" /></label>
         <label class="judicial-only">Estado procesal<input id="asuntoCausaEstado" placeholder="Audiencia preparatoria pendiente" /></label>
-        <label class="judicial-only">Etapa<input id="asuntoCausaEtapa" placeholder="Discusión / Prueba / Recursos" /></label>
+        <label class="judicial-only">Etapa<input id="asuntoCausaEtapa" placeholder="Discusión / Prueba / Recursos" title="Etapa procesal actual en que se encuentra la causa." /></label>
         <label class="judicial-only">Próxima audiencia<input id="asuntoCausaAudiencia" type="date" /></label>
         <label class="wide judicial-only">Link PJUD<input id="asuntoCausaLink" type="url" /></label>
         <label class="wide">Observaciones<textarea id="asuntoObs"></textarea></label>
@@ -239,11 +242,11 @@
         <label>Cliente opcional<select id="causaClienteFiltro"><option value="">Todos los clientes</option></select></label>
         <label>Asunto judicial<select id="causaAsunto" required></select></label>
         <label>Tribunal<input id="causaTribunal" required placeholder="Juzgado de Letras del Trabajo de La Serena" /></label>
-        <label>RIT<input id="causaRit" /></label>
-        <label>ROL<input id="causaRol" /></label>
+        <label>RIT<input id="causaRit" title="RIT: Rol Interno de Tribunal (identificador interno de la causa)." /></label>
+        <label>ROL<input id="causaRol" title="ROL: número de rol público/externo de la causa." /></label>
         <label class="wide">Carátula<input id="causaCaratula" /></label>
         <label>Estado procesal<input id="causaEstado" placeholder="Audiencia preparatoria pendiente" /></label>
-        <label>Etapa<input id="causaEtapa" placeholder="Discusión / Prueba / Recursos" /></label>
+        <label>Etapa<input id="causaEtapa" placeholder="Discusión / Prueba / Recursos" title="Etapa procesal actual en que se encuentra la causa." /></label>
         <label class="wide">Audiencias
           <div id="causaAudienciasContainer" class="audiencias-container"></div>
           <button type="button" id="addAudienciaBtn" class="secondary-btn small-action">+ Agregar audiencia</button>
@@ -284,7 +287,7 @@
         <label>Nombre<input id="plazoNombre" required /></label>
         <label>Inicio<input id="plazoInicio" type="date" /></label>
         <label>Vencimiento<input id="plazoVencimiento" type="date" required /></label>
-        <label>Tipo de días<select id="plazoTipo"><option>Judiciales</option><option>Corridos</option><option>Hábiles</option></select></label>
+        <label>Tipo de días<select id="plazoTipo" title="Judiciales: según reglas procesales; Corridos: todos los días; Hábiles: excluye inhábiles."><option>Judiciales</option><option>Corridos</option><option>Hábiles</option></select></label>
         <label>Responsable(s)<select id="plazoResponsable" multiple></select><small>Puede seleccionar uno o más responsables.</small></label>
         <label>Estado<select id="plazoEstado"><option>Vigente</option><option>Cumplido</option><option>Vencido</option><option>Suspendido</option></select></label>
         <label class="wide">Observaciones<textarea id="plazoObs"></textarea></label>

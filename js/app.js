@@ -24,6 +24,7 @@ let autoSyncTimer = null;
 let isPullingFromDb = false;
 let isPushingToDb = false;
 const AUTO_SYNC_DELAY_MS = 900;
+const wizardState = { enabled: false, clienteId: '', asuntoId: '' };
 function showSyncMessage(message, isError = false){
   clearTimeout(syncMessageTimer);
   const status = $('#syncStatus');
@@ -168,6 +169,7 @@ $('#logoutBtn').addEventListener('click', () => { state.session = null; saveStat
 $('#syncPullBtn')?.addEventListener('click', pullFromCpanelDb);
 $('#syncPushBtn')?.addEventListener('click', pushToCpanelDb);
 $('#sidebarUserName')?.addEventListener('click', openProfileModal);
+$('#quickWizardBtn')?.addEventListener('click', startQuickWizard);
 
 function updateSidebarUserName(){
   const el = $('#sidebarUserName');
@@ -618,8 +620,43 @@ function upsert(collection, item){
   if(ix>=0) state[collection][ix] = { ...state[collection][ix], ...item };
   else state[collection].push(item);
   notifyNewAssignments(collection, prev, state[collection].find(x=>x.id===item.id));
+  handleWizardFlow(collection, state[collection].find(x=>x.id===item.id));
   log(`${ix>=0?'Actualizó':'Creó'} registro en ${collection}`); renderAll();
   queueAutoPushToCpanel();
+}
+function startQuickWizard(){
+  wizardState.enabled = true; wizardState.clienteId = ''; wizardState.asuntoId = '';
+  alert('Paso 1/3: crea el cliente. Luego se abrirá automáticamente el asunto.');
+  openModal('clienteModal');
+}
+function handleWizardFlow(collection, item){
+  if(!wizardState.enabled || !item) return;
+  if(collection === 'clientes'){
+    wizardState.clienteId = item.id;
+    openModal('asuntoModal');
+    setField('#asuntoCliente', item.id);
+    alert('Paso 2/3: completa el asunto. Luego crearás la primera tarea o plazo.');
+    return;
+  }
+  if(collection === 'asuntos'){
+    wizardState.asuntoId = item.id;
+    const createTask = confirm('Paso 3/3: ¿Deseas crear primero una tarea? (Cancelar = crear plazo)');
+    openModal(createTask ? 'tareaModal' : 'plazoModal');
+    if(createTask){
+      setField('#tareaClienteFiltro', item.clienteId || wizardState.clienteId || '');
+      hydrateAsuntoSelectsByCliente();
+      setField('#tareaAsunto', item.id);
+    }else{
+      setField('#plazoClienteFiltro', item.clienteId || wizardState.clienteId || '');
+      hydrateAsuntoSelectsByCliente();
+      setField('#plazoAsunto', item.id);
+    }
+    return;
+  }
+  if(collection === 'tareas' || collection === 'plazos'){
+    wizardState.enabled = false;
+    alert('Wizard completado ✅');
+  }
 }
 function notifyNewAssignments(collection, prevItem, nextItem){
   if(!['asuntos','tareas','plazos'].includes(collection) || !nextItem) return;
@@ -896,11 +933,14 @@ function applyTemplate(kind){
 }
 function renderUtilidades(){
   const t = state.templates || { asuntos:[], tareas:[], plazos:[] };
-  $('#templatesPanel').innerHTML = `<h3>Plantillas reutilizables</h3><p>Guarda formatos base para asuntos, tareas y plazos.</p>
+  const syncPanel = `<h3>Sincronización</h3><p>Úsala cuando necesites traer o respaldar el estado completo entre dispositivos.</p><div class="toolbar"><button id="syncPullBtnCard" class="secondary-btn">Leer DB cPanel</button><button id="syncPushBtnCard" class="secondary-btn">Escribir DB cPanel</button></div>`;
+  $('#templatesPanel').innerHTML = `${syncPanel}<hr><h3>Plantillas reutilizables</h3><p>Úsalas para crear registros repetitivos más rápido y con formato consistente.</p>
     <div class="toolbar"><button class="secondary-btn" onclick="saveCurrentAsTemplate('asunto')">Guardar asunto actual como plantilla</button><button class="secondary-btn" onclick="saveCurrentAsTemplate('tarea')">Guardar tarea actual como plantilla</button><button class="secondary-btn" onclick="saveCurrentAsTemplate('plazo')">Guardar plazo actual como plantilla</button><button class="secondary-btn" onclick="sendDailyTaskReminders()">Enviar recordatorio diario ahora</button></div>
     <p>Asuntos: ${t.asuntos.length} · Tareas: ${t.tareas.length} · Plazos: ${t.plazos.length}</p>`;
-  $('#actividadPanel').innerHTML = `<h3>Actividad del equipo</h3><div class="toolbar"><input id="activityUserFilter" placeholder="Filtrar por correo usuario..." /><input id="activityDateFilter" type="date" /></div><div class="list">${renderActividadList()}</div>`;
-  $('#notificacionesPanel').innerHTML = `<h3>Notificaciones internas</h3><div class="list">${renderAlertList()}</div>`;
+  $('#actividadPanel').innerHTML = `<h3>Actividad del equipo</h3><p>Revisa trazabilidad de cambios por usuario y fecha.</p><div class="toolbar"><input id="activityUserFilter" placeholder="Filtrar por correo usuario..." /><input id="activityDateFilter" type="date" /></div><div class="list">${renderActividadList()}</div>`;
+  $('#notificacionesPanel').innerHTML = `<h3>Correo y recordatorios</h3><p>Notificaciones internas y recordatorios de pendientes para el equipo.</p><div class="list">${renderAlertList()}</div>`;
+  $('#syncPullBtnCard')?.addEventListener('click', pullFromCpanelDb);
+  $('#syncPushBtnCard')?.addEventListener('click', pushToCpanelDb);
 }
 function renderActividadList(){
   const user = ($('#activityUserFilter')?.value || '').toLowerCase();
@@ -1235,13 +1275,36 @@ function renderCausas(){
   $('#causasList').innerHTML = `<div class="cards-grid embedded-grid">${items.map(c=>{const prox=nextAudiencia(c); return `<article class="entity-card clickable-card" onclick="openCausaDetalle('${c.id}')"><span class="badge ok">${safe(c.estadoProcesal || 'Causa')}</span><h4>${safe(c.caratula || getAsunto(c.asuntoId)?.nombre || 'Causa judicial')}</h4><p>${safe(c.tribunal || 'Sin tribunal')}</p><p>RIT/ROL: ${safe(c.rit || '-')} / ${safe(c.rol || '-')}</p><p>Próxima audiencia: ${prox ? `${safe(prox.tipo === 'Otro' ? prox.otro : prox.tipo)} · ${fmtDate(prox.fecha)} ${safe(prox.hora || '')}` : 'Sin audiencia'}</p><div class="card-actions"><button class="mini-btn" onclick="event.stopPropagation(); openCausaDetalle('${c.id}')">Ver detalle</button><button class="mini-btn ok-btn" onclick="event.stopPropagation(); completeCausa('${c.id}')">Completar y archivar</button><button class="mini-btn danger" onclick="event.stopPropagation(); removeItem('causas','${c.id}')">Eliminar</button></div></article>`}).join('') || '<div class="empty">Sin causas judiciales activas.</div>'}</div>${archivadas ? `<div class="archive-note">${archivadas} causa(s) judicial(es) completada(s) y archivada(s). Revísalas en la sección Archivo.</div>` : ''}`;
 }
 function renderTareas(){
+  const responsibleFilter = $('#tareaResponsableFiltro')?.value || '';
+  const priorityFilter = $('#tareaPrioridadFiltro')?.value || '';
   const estados = ['Pendiente','En proceso','Atrasada'];
   const archivadas = state.tareas.filter(t=>t.archivada || t.estado==='Terminada').length;
+  const userOptions = state.users.map(u=>`<option value="${u.id}">${safe(u.nombre)}</option>`).join('');
+  const filterBar = `<div class="toolbar"><select id="tareaResponsableFiltro"><option value="">Todos los responsables</option>${userOptions}</select><select id="tareaPrioridadFiltro"><option value="">Todas las prioridades</option><option>Baja</option><option>Media</option><option>Alta</option><option>Urgente</option></select></div>`;
   $('#kanban').innerHTML = estados.map(est=>{
-    const items = state.tareas.filter(t => asuntoActivo(t.asuntoId) && !t.archivada && t.estado !== 'Terminada').filter(t => est==='Atrasada' ? t.vencimiento && daysUntil(t.vencimiento)<0 : t.estado===est && !(t.vencimiento && daysUntil(t.vencimiento)<0));
-    return `<div class="kanban-col"><h4>${est} (${items.length})</h4>${items.map(t=>`<div class="task-card clickable-card" onclick="openTareaDetalle('${t.id}')"><span class="badge ${badgeClass(t.prioridad)}">${safe(t.prioridad)}</span><strong>${safe(t.titulo)}</strong><p>${safe(t.descripcion || 'Sin descripción')}</p><p>${safe(getAsunto(t.asuntoId)?.nombre || 'Sin asunto')}</p><p>Vence: ${fmtDate(t.vencimiento)}</p><p>Responsable: ${safe(getResponsableNames(t) || '-')}</p><div class="card-actions"><button class="mini-btn" onclick="event.stopPropagation(); openTareaDetalle('${t.id}')">Ver detalle</button><button class="mini-btn ok-btn" onclick="event.stopPropagation(); completeTarea('${t.id}')">Completar y archivar</button><button class="mini-btn danger" onclick="event.stopPropagation(); removeItem('tareas','${t.id}')">Eliminar</button></div></div>`).join('') || '<div class="empty">Sin registros.</div>'}</div>`;
+    const items = state.tareas.filter(t => asuntoActivo(t.asuntoId) && !t.archivada && t.estado !== 'Terminada')
+      .filter(t => est==='Atrasada' ? t.vencimiento && daysUntil(t.vencimiento)<0 : t.estado===est && !(t.vencimiento && daysUntil(t.vencimiento)<0))
+      .filter(t => !responsibleFilter || asArray(t.responsableIds || t.responsableId).includes(responsibleFilter))
+      .filter(t => !priorityFilter || t.prioridad === priorityFilter);
+    return `<div class="kanban-col" data-status="${est}" ondragover="event.preventDefault()" ondrop="dropTaskStatus(event,'${est}')"><h4>${est} (${items.length})</h4>${items.map(t=>{const chips=[!asArray(t.responsableIds||t.responsableId).length?'Sin responsable':'',daysUntil(t.vencimiento)===0?'Vence hoy':'',daysUntil(t.vencimiento)<0?'Atrasada':''].filter(Boolean).map(c=>`<span class="badge warn">${c}</span>`).join(' '); return `<div class="task-card clickable-card" draggable="true" ondragstart="dragTaskStatus(event,'${t.id}')" onclick="openTareaDetalle('${t.id}')"><span class="badge ${badgeClass(t.prioridad)}">${safe(t.prioridad)}</span> ${chips}<strong>${safe(t.titulo)}</strong><p>${safe(t.descripcion || 'Sin descripción')}</p><p>${safe(getAsunto(t.asuntoId)?.nombre || 'Sin asunto')}</p><p>Vence: ${fmtDate(t.vencimiento)}</p><p>Responsable(s): ${safe(getResponsableNames(t) || '-')}</p><div class="card-actions"><button class="mini-btn" onclick="event.stopPropagation(); openTareaDetalle('${t.id}')">Ver detalle</button><button class="mini-btn ok-btn" onclick="event.stopPropagation(); completeTarea('${t.id}')">Completar y archivar</button><button class="mini-btn danger" onclick="event.stopPropagation(); removeItem('tareas','${t.id}')">Eliminar</button></div></div>`;}).join('') || '<div class="empty">Sin registros.</div>'}</div>`;
   }).join('') + (archivadas ? `<div class="archive-note kanban-archive-note">${archivadas} tarea(s) completada(s) y archivada(s). No se muestran en el tablero activo.</div>` : '');
+  $('#kanban').innerHTML = filterBar + $('#kanban').innerHTML;
+  setField('#tareaResponsableFiltro', responsibleFilter);
+  setField('#tareaPrioridadFiltro', priorityFilter);
 }
+function dragTaskStatus(event, taskId){ event.dataTransfer.setData('text/plain', taskId); }
+function dropTaskStatus(event, status){
+  const taskId = event.dataTransfer.getData('text/plain');
+  const t = state.tareas.find(x=>x.id===taskId);
+  if(!t) return;
+  t.estado = status === 'Atrasada' ? 'Pendiente' : status;
+  if(status === 'Terminada') t.archivada = true;
+  log(`Cambió estado de tarea por arrastre: ${t.titulo} → ${status}`);
+  renderTareas();
+  queueAutoPushToCpanel();
+}
+window.dragTaskStatus = dragTaskStatus;
+window.dropTaskStatus = dropTaskStatus;
 function renderPlazos(){
   const activos = state.plazos.filter(p=>asuntoActivo(p.asuntoId) && plazoActivo(p)).sort(sortByVencimiento);
   const ocultos = state.plazos.length - activos.length;
@@ -1280,6 +1343,7 @@ window.editUser = editUser;
 
 ['clienteSearch','asuntoSearch','causaSearch'].forEach(id => document.addEventListener('input', e => { if(e.target.id===id) renderAll(); }));
 ['activityUserFilter','activityDateFilter'].forEach(id => document.addEventListener('input', e => { if(e.target.id===id) renderUtilidades(); }));
+['tareaResponsableFiltro','tareaPrioridadFiltro'].forEach(id => document.addEventListener('change', e => { if(e.target.id===id) renderTareas(); }));
 $('#asuntoApplyTemplateBtn')?.addEventListener('click', ()=>applyTemplate('asunto'));
 $('#tareaApplyTemplateBtn')?.addEventListener('click', ()=>applyTemplate('tarea'));
 $('#plazoApplyTemplateBtn')?.addEventListener('click', ()=>applyTemplate('plazo'));
