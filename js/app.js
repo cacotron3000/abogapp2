@@ -163,6 +163,23 @@ function updateSidebarUserName(){
   if(el) el.textContent = state.session?.nombre || state.session?.correo || 'Usuario';
 }
 function currentUser(){ return state.users.find(u => u.id === state.session?.id); }
+function resizeProfileImage(dataUrl, maxSize = 512){
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const ratio = Math.min(1, maxSize / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * ratio));
+      const h = Math.max(1, Math.round(img.height * ratio));
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
 function openProfileModal(){
   const u = currentUser();
   if(!u) return;
@@ -189,9 +206,10 @@ $('#perfilFoto')?.addEventListener('change', e => {
   if(!file) return;
   $('#perfilFotoLoading')?.classList.remove('hidden');
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
+    const processed = await resizeProfileImage(String(reader.result || ''));
     const preview = $('#perfilFotoPreview');
-    if(preview){ preview.src = reader.result; preview.style.display='block'; }
+    if(preview){ preview.src = processed; preview.style.display='block'; }
     $('#perfilFotoBtn')?.classList.add('hidden');
     $('#perfilFotoLoading')?.classList.add('hidden');
   };
@@ -221,22 +239,28 @@ $('#perfilEliminarFotoBtn')?.addEventListener('click', () => {
   $('#modalBackdrop').classList.add('hidden');
 });
 function handleProfileSave(){
-  let u = currentUser();
-  if(!u && state.session){
-    u = { id: state.session.id, nombre: state.session.nombre, correo: state.session.correo, rol: state.session.rol, activo: true, password: '' };
+  try{
+    let u = currentUser();
+    if(!u && state.session){
+      u = { id: state.session.id, nombre: state.session.nombre, correo: state.session.correo, rol: state.session.rol, activo: true, password: '' };
+    }
+    if(!u){ alert('No se pudo identificar el usuario actual.'); return false; }
+    const p1 = $('#perfilPassword').value;
+    const p2 = $('#perfilPassword2').value;
+    if((p1 || p2) && p1 !== p2){ alert('Las contraseñas no coinciden.'); return false; }
+    const previewSrc = $('#perfilFotoPreview')?.getAttribute('src') || u.fotoPerfil || '';
+    upsert('users', { id: u.id, nombre: $('#perfilNombre').value, correo: $('#perfilCorreo').value, rol: u.rol, activo: u.activo, password: p1 || u.password || '', fotoPerfil: previewSrc, ultimoIngreso: u.ultimoIngreso || null });
+    state.session.nombre = $('#perfilNombre').value;
+    state.session.correo = $('#perfilCorreo').value;
+    updateSidebarUserName();
+    clearModalDraft('perfilModal');
+    closeModals();
+    return true;
+  }catch(err){
+    console.error(err);
+    alert('No se pudo guardar el perfil. Revise los datos e intente nuevamente.');
+    return false;
   }
-  if(!u){ alert('No se pudo identificar el usuario actual.'); return false; }
-  const p1 = $('#perfilPassword').value;
-  const p2 = $('#perfilPassword2').value;
-  if((p1 || p2) && p1 !== p2){ alert('Las contraseñas no coinciden.'); return false; }
-  const previewSrc = $('#perfilFotoPreview')?.src || u.fotoPerfil || '';
-  upsert('users', { id: u.id, nombre: $('#perfilNombre').value, correo: $('#perfilCorreo').value, rol: u.rol, activo: u.activo, password: p1 || u.password || '', fotoPerfil: previewSrc, ultimoIngreso: u.ultimoIngreso || null });
-  state.session.nombre = $('#perfilNombre').value;
-  state.session.correo = $('#perfilCorreo').value;
-  updateSidebarUserName();
-  clearModalDraft('perfilModal');
-  closeModals();
-  return true;
 }
 $('#perfilForm')?.addEventListener('submit', e => { e.preventDefault(); handleProfileSave(); });
 $('#perfilGuardarBtn')?.addEventListener('click', (e) => {
