@@ -975,18 +975,20 @@ function applyUiPreferences(){
   document.documentElement.style.setProperty('--ui-font-scale', String(ui.fontScale || 1));
   document.documentElement.style.setProperty('--ui-radius-mult', ui.radius === 'straight' ? '0.22' : '1');
   const themes = {
-    original: {principal:'#468E76', principalDark:'#2f6f5c', bg:'#f5f7f8', dark:'#25282A'},
-    midnight: {principal:'#34495e', principalDark:'#1f2d3a', bg:'#f2f5f9', dark:'#1f2937'},
-    emerald: {principal:'#0f766e', principalDark:'#115e59', bg:'#f0fdfa', dark:'#1f2937'},
-    royal: {principal:'#4338ca', principalDark:'#312e81', bg:'#f5f3ff', dark:'#1f2937'},
-    sand: {principal:'#b7791f', principalDark:'#975a16', bg:'#fffaf0', dark:'#3f3a2f'},
-    graphite: {principal:'#4b5563', principalDark:'#374151', bg:'#f3f4f6', dark:'#111827'}
+    original: {principal:'#468E76', principalDark:'#2f6f5c', bg:'#f5f7f8', dark:'#25282A', hoverBg:'#edf6f2', hoverBorder:'#c7dcd3'},
+    midnight: {principal:'#34495e', principalDark:'#1f2d3a', bg:'#f2f5f9', dark:'#1f2937', hoverBg:'#e7eef7', hoverBorder:'#b8c6d8'},
+    emerald: {principal:'#0f766e', principalDark:'#115e59', bg:'#f0fdfa', dark:'#1f2937', hoverBg:'#dff7f3', hoverBorder:'#9fd9cd'},
+    royal: {principal:'#4338ca', principalDark:'#312e81', bg:'#f5f3ff', dark:'#1f2937', hoverBg:'#ebe8ff', hoverBorder:'#b7b0ff'},
+    sand: {principal:'#b7791f', principalDark:'#975a16', bg:'#fffaf0', dark:'#3f3a2f', hoverBg:'#fff1d9', hoverBorder:'#e7c38e'},
+    graphite: {principal:'#4b5563', principalDark:'#374151', bg:'#f3f4f6', dark:'#111827', hoverBg:'#e6e8ec', hoverBorder:'#b9c0ca'}
   };
   const p = themes[ui.theme] || themes.original;
   document.documentElement.style.setProperty('--principal', p.principal);
   document.documentElement.style.setProperty('--principal-dark', p.principalDark);
   document.documentElement.style.setProperty('--bg', p.bg);
   document.documentElement.style.setProperty('--dark', p.dark);
+  document.documentElement.style.setProperty('--hover-bg', p.hoverBg || '#edf6f2');
+  document.documentElement.style.setProperty('--hover-border', p.hoverBorder || '#cbd5e1');
 }
 function renderActividadList(){
   const user = ($('#activityUserFilter')?.value || '').toLowerCase();
