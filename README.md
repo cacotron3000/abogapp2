@@ -52,3 +52,15 @@ En `abogapp2_users` se usan columnas estructuradas:
 `id`, `email`, `nombre`, `telefono`, `role`, `password_hash`, `is_admin`, `active`, `created_at`, `updated_at`.
 
 Las contraseñas de usuarios se guardan en `password_hash` con `password_hash()` de PHP (no en texto plano).
+
+## Roadmap de mejoras de UX y fidelización
+
+Prioridades sugeridas para aumentar adopción diaria del equipo:
+
+1. **Bandeja de hoy en el dashboard** con tareas atrasadas, plazos próximos y audiencias cercanas.
+2. **Estado de sincronización visible** (última sync exitosa, pendientes por sync y estado offline/online).
+3. **Plantillas reutilizables** para asuntos, tareas y plazos recurrentes.
+4. **Actividad del equipo** con filtros por usuario y fecha para trazabilidad operacional.
+5. **Notificaciones internas** para vencimientos, tareas sin responsable y causas sin próxima audiencia.
+
+Estas mejoras están ordenadas por impacto operativo inmediato y facilidad de adopción por parte de estudios jurídicos pequeños y medianos.
