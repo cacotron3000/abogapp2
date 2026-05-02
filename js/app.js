@@ -7,7 +7,7 @@ const initialState = {
     { id: crypto.randomUUID(), nombre: 'Abogado 1', correo: 'abogado1@gjabogados.cl', rol: 'Abogado', activo: true, password: 'demo123' },
     { id: crypto.randomUUID(), nombre: 'Abogado 2', correo: 'abogado2@gjabogados.cl', rol: 'Abogado', activo: true, password: 'demo123' }
   ],
-  clientes: [], asuntos: [], causas: [], tareas: [], plazos: [], cotizaciones: [], logs: [], templates: { asuntos: [], tareas: [], plazos: [] }
+  clientes: [], asuntos: [], causas: [], tareas: [], plazos: [], cotizaciones: [], logs: [], templates: { asuntos: [], tareas: [], plazos: [] }, ui: { fontScale: 1, radius: 'rounded', theme: 'original' }
 };
 
 let state = loadState();
@@ -106,6 +106,8 @@ function normalizeState(){
   state.plazos = (state.plazos || []).map(p => ({ ...p, tipoDias: p.tipoDias || 'Judiciales', responsableIds: asArray(p.responsableIds || p.responsableId), archivado: p.archivado || p.estado === 'Cumplido' || p.estado === 'Archivado' }));
   state.sugerencias = state.sugerencias || { asuntoNombres: [], asuntoMaterias: [] };
   state.templates = state.templates || { asuntos: [], tareas: [], plazos: [] };
+  state.ui = state.ui || { fontScale: 1, radius: 'rounded', theme: 'original' };
+  applyUiPreferences();
   state.formDrafts = state.formDrafts || {};
   saveState();
 }
@@ -943,8 +945,47 @@ function renderUtilidades(){
     <p>Asuntos: ${t.asuntos.length} · Tareas: ${t.tareas.length} · Plazos: ${t.plazos.length}</p>`;
   $('#actividadPanel').innerHTML = `<h3>Actividad del equipo</h3><p>Revisa trazabilidad de cambios por usuario y fecha.</p><div class="toolbar"><input id="activityUserFilter" placeholder="Filtrar por correo usuario..." /><input id="activityDateFilter" type="date" /></div><div class="list">${renderActividadList()}</div>`;
   $('#notificacionesPanel').innerHTML = `<h3>Correo y recordatorios</h3><p>Notificaciones internas y recordatorios de pendientes para el equipo.</p><div class="list">${renderAlertList()}</div>`;
+  const schemes = [
+    ['original','Original elegante'],
+    ['midnight','Midnight'],
+    ['emerald','Emerald'],
+    ['royal','Royal'],
+    ['sand','Sand'],
+    ['graphite','Graphite']
+  ];
+  $('#notificacionesPanel').innerHTML += `<hr><h3>Estilo y esquema de colores</h3><p>Personaliza legibilidad y aspecto visual de la app para el equipo.</p>
+    <div class="form-grid">
+      <label>Tamaño de letras<select id="uiFontScale"><option value="0.95">Compacto</option><option value="1">Normal</option><option value="1.08">Grande</option><option value="1.16">Muy grande</option></select></label>
+      <label>Forma de bordes<select id="uiRadius"><option value="rounded">Redondeados</option><option value="straight">Rectos</option></select></label>
+      <label class="wide">Esquema de colores<select id="uiTheme">${schemes.map(([v,t])=>`<option value="${v}">${t}</option>`).join('')}</select></label>
+    </div>`;
   $('#syncPullBtnCard')?.addEventListener('click', pullFromCpanelDb);
   $('#syncPushBtnCard')?.addEventListener('click', pushToCpanelDb);
+  setUiSelectors();
+}
+function setUiSelectors(){
+  const ui = state.ui || {};
+  if($('#uiFontScale')) $('#uiFontScale').value = String(ui.fontScale || 1);
+  if($('#uiRadius')) $('#uiRadius').value = ui.radius || 'rounded';
+  if($('#uiTheme')) $('#uiTheme').value = ui.theme || 'original';
+}
+function applyUiPreferences(){
+  const ui = state.ui || { fontScale:1, radius:'rounded', theme:'original' };
+  document.documentElement.style.setProperty('--ui-font-scale', String(ui.fontScale || 1));
+  document.documentElement.style.setProperty('--ui-radius-mult', ui.radius === 'straight' ? '0.22' : '1');
+  const themes = {
+    original: {principal:'#468E76', principalDark:'#2f6f5c', bg:'#f5f7f8', dark:'#25282A'},
+    midnight: {principal:'#34495e', principalDark:'#1f2d3a', bg:'#f2f5f9', dark:'#1f2937'},
+    emerald: {principal:'#0f766e', principalDark:'#115e59', bg:'#f0fdfa', dark:'#1f2937'},
+    royal: {principal:'#4338ca', principalDark:'#312e81', bg:'#f5f3ff', dark:'#1f2937'},
+    sand: {principal:'#b7791f', principalDark:'#975a16', bg:'#fffaf0', dark:'#3f3a2f'},
+    graphite: {principal:'#4b5563', principalDark:'#374151', bg:'#f3f4f6', dark:'#111827'}
+  };
+  const p = themes[ui.theme] || themes.original;
+  document.documentElement.style.setProperty('--principal', p.principal);
+  document.documentElement.style.setProperty('--principal-dark', p.principalDark);
+  document.documentElement.style.setProperty('--bg', p.bg);
+  document.documentElement.style.setProperty('--dark', p.dark);
 }
 function renderActividadList(){
   const user = ($('#activityUserFilter')?.value || '').toLowerCase();
@@ -1354,6 +1395,14 @@ document.addEventListener('input', e => {
 });
 ['activityUserFilter','activityDateFilter'].forEach(id => document.addEventListener('input', e => { if(e.target.id===id) renderUtilidades(); }));
 ['tareaResponsableFiltro','tareaPrioridadFiltro'].forEach(id => document.addEventListener('change', e => { if(e.target.id===id) renderTareas(); }));
+['uiFontScale','uiRadius','uiTheme'].forEach(id => document.addEventListener('change', e => {
+  if(e.target.id !== id) return;
+  state.ui.fontScale = Number($('#uiFontScale')?.value || 1);
+  state.ui.radius = $('#uiRadius')?.value || 'rounded';
+  state.ui.theme = $('#uiTheme')?.value || 'original';
+  applyUiPreferences();
+  saveState();
+}));
 $('#asuntoApplyTemplateBtn')?.addEventListener('click', ()=>applyTemplate('asunto'));
 $('#tareaApplyTemplateBtn')?.addEventListener('click', ()=>applyTemplate('tarea'));
 $('#plazoApplyTemplateBtn')?.addEventListener('click', ()=>applyTemplate('plazo'));
