@@ -7,7 +7,7 @@ const initialState = {
     { id: crypto.randomUUID(), nombre: 'Abogado 1', correo: 'abogado1@gjabogados.cl', rol: 'Abogado', activo: true, password: 'demo123' },
     { id: crypto.randomUUID(), nombre: 'Abogado 2', correo: 'abogado2@gjabogados.cl', rol: 'Abogado', activo: true, password: 'demo123' }
   ],
-  clientes: [], asuntos: [], causas: [], tareas: [], plazos: [], cotizaciones: [], logs: []
+  clientes: [], asuntos: [], causas: [], tareas: [], plazos: [], cotizaciones: [], logs: [], templates: { asuntos: [], tareas: [], plazos: [] }
 };
 
 let state = loadState();
@@ -94,6 +94,7 @@ function normalizeState(){
   state.causas = (state.causas || []).map(c => ({ ...c, archivada: c.archivada || c.estadoProcesal === 'Archivada' || c.estadoProcesal === 'Terminada' || c.estadoProcesal === 'Cumplida' }));
   state.plazos = (state.plazos || []).map(p => ({ ...p, tipoDias: p.tipoDias || 'Judiciales', responsableIds: asArray(p.responsableIds || p.responsableId), archivado: p.archivado || p.estado === 'Cumplido' || p.estado === 'Archivado' }));
   state.sugerencias = state.sugerencias || { asuntoNombres: [], asuntoMaterias: [] };
+  state.templates = state.templates || { asuntos: [], tareas: [], plazos: [] };
   state.formDrafts = state.formDrafts || {};
   saveState();
 }
@@ -793,7 +794,7 @@ window.descargarCotizacion = descargarCotizacion;
 window.removeCotizacion = removeCotizacion;
 window.addCotizacionConcepto = addCotizacionConcepto;
 
-function renderAll(){ hydrateSelects(); refreshAsuntoSugerencias(); renderDashboard(); renderClientes(); renderAsuntos(); renderCausas(); renderTareas(); renderPlazos(); renderArchivo(); renderUsuarios(); }
+function renderAll(){ hydrateSelects(); refreshAsuntoSugerencias(); hydrateTemplateSelects(); renderDashboard(); renderClientes(); renderAsuntos(); renderCausas(); renderTareas(); renderPlazos(); renderArchivo(); renderUsuarios(); renderUtilidades(); }
 
 function renderDashboard(){
   const dueSoon = state.plazos.filter(p=>asuntoActivo(p.asuntoId) && plazoActivo(p) && p.estado==='Vigente' && daysUntil(p.vencimiento) !== null && daysUntil(p.vencimiento) <= 7).length;
@@ -835,9 +836,63 @@ function renderAlertList(){
   const hearingAlerts = state.causas
     .filter(c=>causaActiva(c) && c.proximaAudiencia && daysUntil(c.proximaAudiencia)>=0 && daysUntil(c.proximaAudiencia)<=14)
     .map(c=>({tipo:'causa', id:c.id, txt:`Audiencia: ${c.caratula || getAsunto(c.asuntoId)?.nombre || 'Causa judicial'}`, sub:`${c.tribunal || 'Sin tribunal'} · ${fmtDate(c.proximaAudiencia)}`, d:daysUntil(c.proximaAudiencia)}));
-  const all = [...plazoAlerts,...taskAlerts,...hearingAlerts].sort((a,b)=>a.d-b.d).slice(0,10);
+  const noResponsibleTasks = state.tareas.filter(t=>asuntoActivo(t.asuntoId) && !t.archivada && t.estado!=='Terminada' && !asArray(t.responsableIds).length)
+    .map(t=>({tipo:'tarea', id:t.id, txt:`Tarea sin responsable: ${t.titulo}`, sub:`${getAsunto(t.asuntoId)?.nombre || 'Sin asunto'}`, d:0}));
+  const causasSinAudiencia = state.causas.filter(c=>causaActiva(c) && !nextAudiencia(c))
+    .map(c=>({tipo:'causa', id:c.id, txt:`Causa sin próxima audiencia`, sub:`${c.caratula || getAsunto(c.asuntoId)?.nombre || 'Causa judicial'}`, d:1}));
+  const all = [...plazoAlerts,...taskAlerts,...hearingAlerts,...noResponsibleTasks,...causasSinAudiencia].sort((a,b)=>a.d-b.d).slice(0,12);
   return all.map(a=>`<div class="list-item clickable-card alert-item" onclick="openDashboardAlert('${a.tipo}','${a.id}')" title="Ver detalle"><div><strong>${safe(a.txt)}</strong><br><span>${safe(a.sub)}</span></div><span class="badge ${a.d<0?'danger':a.d<=2?'warn':'ok'}">${a.d<0?'Vencido':a.d+' días'}</span></div>`).join('') || '<div class="empty">Sin alertas próximas.</div>';
 }
+function hydrateTemplateSelects(){
+  const fill = (selector, list) => {
+    const el = $(selector); if(!el) return;
+    const prev = el.value;
+    el.innerHTML = '<option value="">Sin plantilla</option>' + list.map(t => `<option value="${t.id}">${safe(t.nombre)}</option>`).join('');
+    el.value = prev;
+  };
+  fill('#asuntoTemplateSelect', state.templates.asuntos || []);
+  fill('#tareaTemplateSelect', state.templates.tareas || []);
+  fill('#plazoTemplateSelect', state.templates.plazos || []);
+}
+function applyTemplate(kind){
+  const map = {
+    asunto: { select:'#asuntoTemplateSelect', store:'asuntos', fields:{ '#asuntoTipo':'tipo','#asuntoNombre':'nombre','#asuntoArea':'area','#asuntoMateria':'materia','#asuntoPrioridad':'prioridad','#asuntoEstado':'estado','#asuntoObs':'observaciones' } },
+    tarea: { select:'#tareaTemplateSelect', store:'tareas', fields:{ '#tareaTitulo':'titulo','#tareaPrioridad':'prioridad','#tareaEstado':'estado','#tareaDescripcion':'descripcion' } },
+    plazo: { select:'#plazoTemplateSelect', store:'plazos', fields:{ '#plazoNombre':'nombre','#plazoTipo':'tipoDias','#plazoEstado':'estado','#plazoObs':'observaciones' } }
+  }[kind];
+  const id = $(map.select)?.value; if(!id) return;
+  const tpl = (state.templates[map.store] || []).find(x=>x.id===id); if(!tpl) return;
+  Object.entries(map.fields).forEach(([sel, key]) => setField(sel, tpl.data?.[key] || ''));
+}
+function renderUtilidades(){
+  const t = state.templates || { asuntos:[], tareas:[], plazos:[] };
+  $('#templatesPanel').innerHTML = `<h3>Plantillas reutilizables</h3><p>Guarda formatos base para asuntos, tareas y plazos.</p>
+    <div class="toolbar"><button class="secondary-btn" onclick="saveCurrentAsTemplate('asunto')">Guardar asunto actual como plantilla</button><button class="secondary-btn" onclick="saveCurrentAsTemplate('tarea')">Guardar tarea actual como plantilla</button><button class="secondary-btn" onclick="saveCurrentAsTemplate('plazo')">Guardar plazo actual como plantilla</button></div>
+    <p>Asuntos: ${t.asuntos.length} · Tareas: ${t.tareas.length} · Plazos: ${t.plazos.length}</p>`;
+  $('#actividadPanel').innerHTML = `<h3>Actividad del equipo</h3><div class="toolbar"><input id="activityUserFilter" placeholder="Filtrar por correo usuario..." /><input id="activityDateFilter" type="date" /></div><div class="list">${renderActividadList()}</div>`;
+  $('#notificacionesPanel').innerHTML = `<h3>Notificaciones internas</h3><div class="list">${renderAlertList()}</div>`;
+}
+function renderActividadList(){
+  const user = ($('#activityUserFilter')?.value || '').toLowerCase();
+  const date = $('#activityDateFilter')?.value || '';
+  const items = (state.logs || []).filter(l => !user || String(l.user || '').toLowerCase().includes(user))
+    .filter(l => !date || String(l.at || '').slice(0,10) === date).slice(0,30);
+  return items.map(l=>`<div class="list-item"><div><strong>${safe(l.user || 'sistema')}</strong>: ${safe(l.action)}<br><span>${new Date(l.at).toLocaleString('es-CL')}</span></div></div>`).join('') || '<div class="empty">Sin actividad para los filtros seleccionados.</div>';
+}
+function saveCurrentAsTemplate(kind){
+  const name = prompt('Nombre de la plantilla:');
+  if(!name) return;
+  const payload = kind === 'asunto'
+    ? { tipo:$('#asuntoTipo').value, nombre:$('#asuntoNombre').value.trim(), area:$('#asuntoArea').value, materia:$('#asuntoMateria').value.trim(), prioridad:$('#asuntoPrioridad').value, estado:$('#asuntoEstado').value, observaciones:$('#asuntoObs').value.trim() }
+    : kind === 'tarea'
+      ? { titulo:$('#tareaTitulo').value.trim(), prioridad:$('#tareaPrioridad').value, estado:$('#tareaEstado').value, descripcion:$('#tareaDescripcion').value.trim() }
+      : { nombre:$('#plazoNombre').value.trim(), tipoDias:$('#plazoTipo').value, estado:$('#plazoEstado').value, observaciones:$('#plazoObs').value.trim() };
+  const bucket = kind === 'asunto' ? 'asuntos' : kind === 'tarea' ? 'tareas' : 'plazos';
+  state.templates[bucket].push({ id: crypto.randomUUID(), nombre: name.trim(), data: payload });
+  log(`Guardó plantilla de ${kind}: ${name.trim()}`);
+  saveState(); renderAll();
+}
+window.saveCurrentAsTemplate = saveCurrentAsTemplate;
 function openDashboardAlert(tipo, id){
   if(tipo === 'plazo') return openPlazoDetalle(id);
   if(tipo === 'tarea') return openTareaDetalle(id);
@@ -1179,6 +1234,10 @@ function editUser(id){
 window.editUser = editUser;
 
 ['clienteSearch','asuntoSearch','causaSearch'].forEach(id => document.addEventListener('input', e => { if(e.target.id===id) renderAll(); }));
+['activityUserFilter','activityDateFilter'].forEach(id => document.addEventListener('input', e => { if(e.target.id===id) renderUtilidades(); }));
+$('#asuntoApplyTemplateBtn')?.addEventListener('click', ()=>applyTemplate('asunto'));
+$('#tareaApplyTemplateBtn')?.addEventListener('click', ()=>applyTemplate('tarea'));
+$('#plazoApplyTemplateBtn')?.addEventListener('click', ()=>applyTemplate('plazo'));
 
 $('#exportBtn').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});

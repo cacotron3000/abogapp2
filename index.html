@@ -131,6 +131,9 @@
           <input id="importFile" type="file" accept="application/json,.json" hidden />
           <button id="exportBtn" class="secondary-btn">Exportar JSON</button>
         </div>
+        <div id="templatesPanel" class="content-card"></div>
+        <div id="actividadPanel" class="content-card"></div>
+        <div id="notificacionesPanel" class="content-card"></div>
       </section>
 
       <section id="usuariosView" class="view">
@@ -203,6 +206,7 @@
       <h3>Nuevo asunto</h3>
       <input type="hidden" id="asuntoId" />
       <div class="form-grid">
+        <label class="wide">Plantilla<select id="asuntoTemplateSelect"><option value="">Sin plantilla</option></select><button type="button" id="asuntoApplyTemplateBtn" class="mini-btn">Aplicar plantilla</button></label>
         <label>Tipo<select id="asuntoTipo"><option>Judicial</option><option>Extrajudicial</option></select></label>
         <label>Cliente<select id="asuntoCliente" required></select></label>
         <label>Nombre del asunto<input id="asuntoNombre" list="asuntoNombreSugerencias" required /></label>
@@ -255,6 +259,7 @@
       <h3>Nueva tarea</h3>
       <input type="hidden" id="tareaId" />
       <div class="form-grid">
+        <label class="wide">Plantilla<select id="tareaTemplateSelect"><option value="">Sin plantilla</option></select><button type="button" id="tareaApplyTemplateBtn" class="mini-btn">Aplicar plantilla</button></label>
         <label>Cliente opcional<select id="tareaClienteFiltro"><option value="">Todos los clientes</option></select></label>
         <label>Asunto<select id="tareaAsunto"></select></label>
         <label>Título<input id="tareaTitulo" required /></label>
@@ -273,6 +278,7 @@
       <h3>Nuevo plazo</h3>
       <input type="hidden" id="plazoId" />
       <div class="form-grid">
+        <label class="wide">Plantilla<select id="plazoTemplateSelect"><option value="">Sin plantilla</option></select><button type="button" id="plazoApplyTemplateBtn" class="mini-btn">Aplicar plantilla</button></label>
         <label>Cliente opcional<select id="plazoClienteFiltro"><option value="">Todos los clientes</option></select></label>
         <label>Asunto<select id="plazoAsunto"></select></label>
         <label>Nombre<input id="plazoNombre" required /></label>
