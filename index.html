@@ -286,8 +286,9 @@
         <label>Asunto<select id="plazoAsunto"></select></label>
         <label>Nombre<input id="plazoNombre" required /></label>
         <label>Inicio<input id="plazoInicio" type="date" /></label>
+        <label>Días de plazo<input id="plazoDias" type="number" min="1" placeholder="Ej. 5" /></label>
         <label>Vencimiento<input id="plazoVencimiento" type="date" required /></label>
-        <label>Tipo de días<select id="plazoTipo" title="Judiciales: según reglas procesales; Corridos: todos los días; Hábiles: excluye inhábiles."><option>Judiciales</option><option>Corridos</option><option>Hábiles</option></select></label>
+        <label>Tipo de días<select id="plazoTipo" title="Corridos: lunes a domingo. Hábiles judiciales: lunes a sábado, excluye domingos y feriados de Chile. Hábiles administrativos: lunes a viernes, excluye sábados, domingos y feriados de Chile."><option>Días corridos</option><option>Días hábiles judiciales</option><option>Días hábiles administrativos</option></select></label>
         <label>Responsable(s)<select id="plazoResponsable" multiple></select><small>Puede seleccionar uno o más responsables.</small></label>
         <label>Estado<select id="plazoEstado"><option>Vigente</option><option>Cumplido</option><option>Vencido</option><option>Suspendido</option></select></label>
         <label class="wide">Observaciones<textarea id="plazoObs"></textarea></label>

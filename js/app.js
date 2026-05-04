@@ -105,7 +105,7 @@ function normalizeState(){
   state.asuntos = (state.asuntos || []).map(a => ({ ...a, responsableIds: asArray(a.responsableIds || a.responsableId), archivado: a.archivado || a.estado === 'Archivado' || a.estado === 'Terminado' }));
   state.tareas = (state.tareas || []).map(t => ({ ...t, responsableIds: asArray(t.responsableIds || t.responsableId), archivada: t.archivada || t.estado === 'Terminada' }));
   state.causas = (state.causas || []).map(c => ({ ...c, archivada: c.archivada || c.estadoProcesal === 'Archivada' || c.estadoProcesal === 'Terminada' || c.estadoProcesal === 'Cumplida' }));
-  state.plazos = (state.plazos || []).map(p => ({ ...p, tipoDias: p.tipoDias || 'Judiciales', responsableIds: asArray(p.responsableIds || p.responsableId), archivado: p.archivado || p.estado === 'Cumplido' || p.estado === 'Archivado' }));
+  state.plazos = (state.plazos || []).map(p => ({ ...p, tipoDias: p.tipoDias || 'Días hábiles judiciales', responsableIds: asArray(p.responsableIds || p.responsableId), archivado: p.archivado || p.estado === 'Cumplido' || p.estado === 'Archivado' }));
   state.sugerencias = state.sugerencias || { asuntoNombres: [], asuntoMaterias: [] };
   state.templates = state.templates || { asuntos: [], tareas: [], plazos: [] };
   state.ui = state.ui || { fontScale: 1, radius: 'rounded', theme: 'original' };
@@ -120,6 +120,43 @@ const todayISO = () => new Date().toISOString().slice(0,10);
 function fmtDate(date){ if(!date) return 'Sin fecha'; return new Date(`${date}T00:00:00`).toLocaleDateString('es-CL'); }
 function daysUntil(date){ if(!date) return null; const a = new Date(`${todayISO()}T00:00:00`); const b = new Date(`${date}T00:00:00`); return Math.ceil((b-a)/86400000); }
 function tomorrowISO(){ const d = new Date(`${todayISO()}T00:00:00`); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); }
+function parseISODate(date){ return date ? new Date(`${date}T00:00:00`) : null; }
+function toISODate(d){ return d.toISOString().slice(0,10); }
+function easterDate(year){
+  const f = Math.floor, G = year % 19, C = f(year / 100), H = (C - f(C/4) - f((8*C+13)/25) + 19*G + 15) % 30, I = H - f(H/28) * (1 - f(29/(H + 1)) * f((21 - G)/11)), J = (year + f(year/4) + I + 2 - C + f(C/4)) % 7, L = I - J, m = 3 + f((L + 40)/44), d = L + 28 - 31*f(m/4);
+  return new Date(Date.UTC(year, m-1, d));
+}
+function chileanHolidaySet(year){
+  const fixed = ['01-01','05-01','05-21','06-29','07-16','08-15','09-18','09-19','10-12','10-31','11-01','12-08','12-25'];
+  const set = new Set(fixed.map(mmdd => `${year}-${mmdd}`));
+  const easter = easterDate(year);
+  const goodFriday = new Date(easter); goodFriday.setUTCDate(easter.getUTCDate()-2);
+  const holySaturday = new Date(easter); holySaturday.setUTCDate(easter.getUTCDate()-1);
+  set.add(toISODate(goodFriday)); set.add(toISODate(holySaturday));
+  return set;
+}
+function isChileHoliday(dateObj){
+  const y = dateObj.getUTCFullYear();
+  return chileanHolidaySet(y).has(toISODate(dateObj));
+}
+function isBusinessDay(dateObj, tipo){
+  const dow = dateObj.getUTCDay(); //0 sunday
+  if(tipo === 'Días corridos') return true;
+  if(tipo === 'Días hábiles judiciales') return dow !== 0 && !isChileHoliday(dateObj);
+  return dow !== 0 && dow !== 6 && !isChileHoliday(dateObj);
+}
+function calculateDueDate(inicio, dias, tipo){
+  const start = parseISODate(inicio);
+  const n = Number(dias || 0);
+  if(!start || !n || n < 1) return '';
+  let cursor = new Date(start);
+  let added = 0;
+  while(added < n){
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+    if(isBusinessDay(cursor, tipo)) added++;
+  }
+  return toISODate(cursor);
+}
 function sortByVencimiento(a,b){ return (a.vencimiento || '9999-12-31').localeCompare(b.vencimiento || '9999-12-31'); }
 function asArray(value){ if(Array.isArray(value)) return value; return value ? [value] : []; }
 function getResponsableNames(item){ const ids = asArray(item.responsableIds || item.responsableId).filter(Boolean); return ids.map(id => getUser(id)?.nombre).filter(Boolean).join(', ') || 'Sin responsable'; }
@@ -334,7 +371,7 @@ function openModal(id){
   resetForms(id); hydrateSelects();
   const modalTitles = { clienteModal:'Nuevo cliente', asuntoModal:'Nuevo asunto', causaModal:'Nueva causa judicial', tareaModal:'Nueva tarea', plazoModal:'Nuevo plazo', usuarioModal:'Nuevo usuario' };
   if(modalTitles[id]) setModalTitle(id, modalTitles[id]);
-  if(id === 'plazoModal'){ setField('#plazoInicio', tomorrowISO()); setField('#plazoTipo', 'Judiciales'); }
+  if(id === 'plazoModal'){ setField('#plazoInicio', tomorrowISO()); setField('#plazoTipo', 'Días hábiles judiciales'); }
   if(id === 'asuntoModal'){ setField('#asuntoTipo', 'Judicial'); toggleAsuntoJudicialFields(); }
   if(id === 'causaModal'){
     const box = $('#causaAudienciasContainer');
@@ -519,6 +556,10 @@ document.addEventListener('change', e => {
     const wrap = e.target.closest('.audiencia-row')?.querySelector('.audiencia-otro-wrap');
     if(wrap) wrap.classList.toggle('hidden', e.target.value !== 'Otro');
   }
+  if(['plazoInicio','plazoDias','plazoTipo'].includes(e.target.id)){
+    const due = calculateDueDate($('#plazoInicio')?.value || '', $('#plazoDias')?.value || '', $('#plazoTipo')?.value || 'Días hábiles judiciales');
+    if(due) setField('#plazoVencimiento', due);
+  }
 });
 document.addEventListener('input', e => {
   const modal = e.target.closest?.('.modal');
@@ -604,7 +645,7 @@ $('#causaForm').addEventListener('submit', e=>{
   clearModalDraft('causaModal'); closeModals(); 
 });
 $('#tareaForm').addEventListener('submit', e=>{ e.preventDefault(); const responsables = getSelectedValues('#tareaResponsable'); upsert('tareas', { id: $('#tareaId').value || crypto.randomUUID(), asuntoId: $('#tareaAsunto').value, titulo: $('#tareaTitulo').value, responsableIds: responsables, responsableId: responsables[0] || '', vencimiento: $('#tareaVencimiento').value, prioridad: $('#tareaPrioridad').value, estado: $('#tareaEstado').value, descripcion: $('#tareaDescripcion').value, archivada: $('#tareaEstado').value === 'Terminada' }); clearModalDraft('tareaModal'); closeModals(); });
-$('#plazoForm').addEventListener('submit', e=>{ e.preventDefault(); const responsables = getSelectedValues('#plazoResponsable'); upsert('plazos', { id: $('#plazoId').value || crypto.randomUUID(), asuntoId: $('#plazoAsunto').value, nombre: $('#plazoNombre').value, inicio: $('#plazoInicio').value || tomorrowISO(), vencimiento: $('#plazoVencimiento').value, tipoDias: $('#plazoTipo').value || 'Judiciales', responsableIds: responsables, responsableId: responsables[0] || '', estado: $('#plazoEstado').value, observaciones: $('#plazoObs').value }); clearModalDraft('plazoModal'); closeModals(); });
+$('#plazoForm').addEventListener('submit', e=>{ e.preventDefault(); const responsables = getSelectedValues('#plazoResponsable'); upsert('plazos', { id: $('#plazoId').value || crypto.randomUUID(), asuntoId: $('#plazoAsunto').value, nombre: $('#plazoNombre').value, inicio: $('#plazoInicio').value || tomorrowISO(), diasPlazo: Number($('#plazoDias').value || 0) || null, vencimiento: $('#plazoVencimiento').value, tipoDias: $('#plazoTipo').value || 'Días hábiles judiciales', responsableIds: responsables, responsableId: responsables[0] || '', estado: $('#plazoEstado').value, observaciones: $('#plazoObs').value }); clearModalDraft('plazoModal'); closeModals(); });
 $('#usuarioForm').addEventListener('submit', e=>{ 
   e.preventDefault();
   const existing = state.users.find(u => u.id === $('#usuarioId').value);
@@ -808,7 +849,7 @@ function editPlazo(id){
   const pz = state.plazos.find(x=>x.id===id); if(!pz) return;
   closeModals(); openModal('plazoModal'); setModalTitle('plazoModal','Editar plazo');
   setField('#plazoId', pz.id); setField('#plazoClienteFiltro', getAsunto(pz.asuntoId)?.clienteId || ''); hydrateAsuntoSelectsByCliente(); setField('#plazoAsunto', pz.asuntoId); setField('#plazoNombre', pz.nombre); setField('#plazoInicio', pz.inicio);
-  setField('#plazoVencimiento', pz.vencimiento); setField('#plazoTipo', pz.tipoDias); setField('#plazoResponsable', pz.responsableIds || pz.responsableId);
+  setField('#plazoDias', pz.diasPlazo || ''); setField('#plazoVencimiento', pz.vencimiento); setField('#plazoTipo', pz.tipoDias); setField('#plazoResponsable', pz.responsableIds || pz.responsableId);
   setField('#plazoEstado', pz.estado); setField('#plazoObs', pz.observaciones);
 }
 
