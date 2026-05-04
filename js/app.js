@@ -157,6 +157,41 @@ function calculateDueDate(inicio, dias, tipo){
   }
   return toISODate(cursor);
 }
+function calculateBackwardDueDate(fechaBase, dias, tipo){
+  const start = parseISODate(fechaBase);
+  const n = Number(dias || 0);
+  if(!start || !n || n < 1) return '';
+  let cursor = new Date(start);
+  let counted = 0;
+  while(counted < n){
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+    if(isBusinessDay(cursor, tipo)) counted++;
+  }
+  return toISODate(cursor);
+}
+function syncLaborContestacionDeadline(asuntoId, audiencias = []){
+  const asunto = getAsunto(asuntoId);
+  if(!asunto || String(asunto.area || '').toLowerCase() !== 'laboral') return;
+  const prep = (audiencias || []).filter(a => (a?.tipo || '').toLowerCase() === 'preparatoria' && a?.fecha).sort((a,b)=>a.fecha.localeCompare(b.fecha))[0];
+  if(!prep) return;
+  // Regla operativa solicitada por el usuario: 5 días hábiles completos hacia atrás desde audiencia preparatoria.
+  // Para cumplir el ejemplo entregado (8 mayo -> 30 abril por feriado 1 mayo), se contabiliza en días hábiles administrativos.
+  const vencimiento = calculateBackwardDueDate(prep.fecha, 5, 'Días hábiles administrativos');
+  if(!vencimiento) return;
+  const existing = state.plazos.find(p => p.asuntoId === asuntoId && (p.autoTipo === 'contestacion_laboral' || /contestaci[oó]n/i.test(String(p.nombre||''))));
+  upsert('plazos', {
+    id: existing?.id || crypto.randomUUID(),
+    asuntoId,
+    nombre: 'Contestación demanda (automático)',
+    inicio: todayISO(),
+    diasPlazo: 5,
+    vencimiento,
+    tipoDias: 'Días hábiles judiciales',
+    estado: 'Vigente',
+    observaciones: `Calculado automáticamente desde audiencia preparatoria (${prep.fecha}).`,
+    autoTipo: 'contestacion_laboral'
+  });
+}
 function sortByVencimiento(a,b){ return (a.vencimiento || '9999-12-31').localeCompare(b.vencimiento || '9999-12-31'); }
 function asArray(value){ if(Array.isArray(value)) return value; return value ? [value] : []; }
 function getResponsableNames(item){ const ids = asArray(item.responsableIds || item.responsableId).filter(Boolean); return ids.map(id => getUser(id)?.nombre).filter(Boolean).join(', ') || 'Sin responsable'; }
@@ -632,6 +667,7 @@ $('#asuntoForm').addEventListener('submit', e=>{
     const existing = state.causas.find(c => c.asuntoId === asuntoId);
     const audiencias = $('#asuntoCausaAudiencia').value ? [{ id: crypto.randomUUID(), tipo:'Preparatoria', otro:'', fecha: $('#asuntoCausaAudiencia').value, hora:'' }] : [];
     upsert('causas', { id: existing?.id || crypto.randomUUID(), asuntoId, tribunal: $('#asuntoCausaTribunal').value, rit: $('#asuntoCausaRit').value, rol: $('#asuntoCausaRol').value, caratula: $('#asuntoCausaCaratula').value, estadoProcesal: $('#asuntoCausaEstado').value, etapa: $('#asuntoCausaEtapa').value, audiencias, proximaAudiencia: $('#asuntoCausaAudiencia').value, link: $('#asuntoCausaLink').value, ultimaActuacion: todayISO() });
+    syncLaborContestacionDeadline(asuntoId, audiencias);
   } else {
     state.causas = state.causas.filter(c => c.asuntoId !== asuntoId);
   }
@@ -642,6 +678,7 @@ $('#causaForm').addEventListener('submit', e=>{
   const audiencias = getCausaAudienciasFromForm();
   const prox = audiencias.filter(a=>a.fecha).sort((a,b)=>(`${a.fecha}T${a.hora||'00:00'}`).localeCompare(`${b.fecha}T${b.hora||'00:00'}`))[0];
   upsert('causas', { id: $('#causaId').value || crypto.randomUUID(), asuntoId: $('#causaAsunto').value, tribunal: $('#causaTribunal').value, rit: $('#causaRit').value, rol: $('#causaRol').value, caratula: $('#causaCaratula').value, estadoProcesal: $('#causaEstado').value, etapa: $('#causaEtapa').value, audiencias, proximaAudiencia: prox?.fecha || '', link: $('#causaLink').value, ultimaActuacion: todayISO() }); 
+  syncLaborContestacionDeadline($('#causaAsunto').value, audiencias);
   clearModalDraft('causaModal'); closeModals(); 
 });
 $('#tareaForm').addEventListener('submit', e=>{ e.preventDefault(); const responsables = getSelectedValues('#tareaResponsable'); upsert('tareas', { id: $('#tareaId').value || crypto.randomUUID(), asuntoId: $('#tareaAsunto').value, titulo: $('#tareaTitulo').value, responsableIds: responsables, responsableId: responsables[0] || '', vencimiento: $('#tareaVencimiento').value, prioridad: $('#tareaPrioridad').value, estado: $('#tareaEstado').value, descripcion: $('#tareaDescripcion').value, archivada: $('#tareaEstado').value === 'Terminada' }); clearModalDraft('tareaModal'); closeModals(); });
