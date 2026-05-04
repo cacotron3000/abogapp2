@@ -169,14 +169,25 @@ function calculateBackwardDueDate(fechaBase, dias, tipo){
   }
   return toISODate(cursor);
 }
+function previousBusinessDay(fechaBase, tipo){
+  const start = parseISODate(fechaBase);
+  if(!start) return '';
+  const cursor = new Date(start);
+  do{
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }while(!isBusinessDay(cursor, tipo));
+  return toISODate(cursor);
+}
 function syncLaborContestacionDeadline(asuntoId, audiencias = []){
   const asunto = getAsunto(asuntoId);
   if(!asunto || String(asunto.area || '').toLowerCase() !== 'laboral') return;
   const prep = (audiencias || []).filter(a => (a?.tipo || '').toLowerCase() === 'preparatoria' && a?.fecha).sort((a,b)=>a.fecha.localeCompare(b.fecha))[0];
   if(!prep) return;
-  // Regla operativa solicitada por el usuario: 5 días hábiles completos hacia atrás desde audiencia preparatoria.
-  // Para cumplir el ejemplo entregado (8 mayo -> 30 abril por feriado 1 mayo), se contabiliza en días hábiles administrativos.
-  const vencimiento = calculateBackwardDueDate(prep.fecha, 5, 'Días hábiles administrativos');
+  // Regla operativa: 5 días hábiles judiciales completos hacia atrás.
+  // Se toma el 5° día hábil hacia atrás y luego se fija el vencimiento en el hábil judicial inmediatamente anterior.
+  // Ejemplos esperados por negocio: 08/05 -> 30/04 y 15/05 -> 08/05.
+  const quintoDia = calculateBackwardDueDate(prep.fecha, 5, 'Días hábiles judiciales');
+  const vencimiento = previousBusinessDay(quintoDia, 'Días hábiles judiciales');
   if(!vencimiento) return;
   const existing = state.plazos.find(p => p.asuntoId === asuntoId && (p.autoTipo === 'contestacion_laboral' || /contestaci[oó]n/i.test(String(p.nombre||''))));
   upsert('plazos', {
