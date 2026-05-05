@@ -1418,14 +1418,14 @@ function renderTareas(){
   const archivadas = state.tareas.filter(t=>t.archivada || t.estado==='Terminada').length;
   const userOptions = state.users.map(u=>`<option value="${u.id}">${safe(u.nombre)}</option>`).join('');
   const filterBar = `<div class="toolbar"><select id="tareaResponsableFiltro"><option value="">Todos los responsables</option>${userOptions}</select><select id="tareaPrioridadFiltro"><option value="">Todas las prioridades</option><option>Baja</option><option>Media</option><option>Alta</option><option>Urgente</option></select></div>`;
-  $('#kanban').innerHTML = estados.map(est=>{
+  const columnsHtml = estados.map(est=>{
     const items = state.tareas.filter(t => asuntoActivo(t.asuntoId) && !t.archivada && t.estado !== 'Terminada')
       .filter(t => est==='Atrasada' ? t.vencimiento && daysUntil(t.vencimiento)<0 : t.estado===est && !(t.vencimiento && daysUntil(t.vencimiento)<0))
       .filter(t => !responsibleFilter || asArray(t.responsableIds || t.responsableId).includes(responsibleFilter))
       .filter(t => !priorityFilter || t.prioridad === priorityFilter);
     return `<div class="kanban-col" data-status="${est}" ondragover="event.preventDefault()" ondrop="dropTaskStatus(event,'${est}')"><h4>${est} (${items.length})</h4>${items.map(t=>{const chips=[!asArray(t.responsableIds||t.responsableId).length?'Sin responsable':'',daysUntil(t.vencimiento)===0?'Vence hoy':'',daysUntil(t.vencimiento)<0?'Atrasada':''].filter(Boolean).map(c=>`<span class="badge warn">${c}</span>`).join(' '); return `<div class="task-card clickable-card" draggable="true" ondragstart="dragTaskStatus(event,'${t.id}')" onclick="openTareaDetalle('${t.id}')"><span class="badge ${badgeClass(t.prioridad)}">${safe(t.prioridad)}</span> ${chips}<strong>${safe(t.titulo)}</strong><p>${safe(t.descripcion || 'Sin descripción')}</p><p>${safe(getAsunto(t.asuntoId)?.nombre || 'Sin asunto')}</p><p>Vence: ${fmtDate(t.vencimiento)}</p><p>Responsable(s): ${safe(getResponsableNames(t) || '-')}</p><div class="card-actions"><button class="mini-btn" onclick="event.stopPropagation(); openTareaDetalle('${t.id}')">Ver detalle</button><button class="mini-btn ok-btn" onclick="event.stopPropagation(); completeTarea('${t.id}')">Completar y archivar</button><button class="mini-btn danger" onclick="event.stopPropagation(); removeItem('tareas','${t.id}')">Eliminar</button></div></div>`;}).join('') || '<div class="empty">Sin registros.</div>'}</div>`;
-  }).join('') + (archivadas ? `<div class="archive-note kanban-archive-note">${archivadas} tarea(s) completada(s) y archivada(s). No se muestran en el tablero activo.</div>` : '');
-  $('#kanban').innerHTML = filterBar + $('#kanban').innerHTML;
+  }).join('');
+  $('#kanban').innerHTML = `${filterBar}<div class="kanban-row">${columnsHtml}</div>${archivadas ? `<div class="archive-note kanban-archive-note">${archivadas} tarea(s) completada(s) y archivada(s). No se muestran en el tablero activo.</div>` : ''}`;
   const respEl = $('#tareaResponsableFiltro');
   const prioEl = $('#tareaPrioridadFiltro');
   if(respEl) respEl.value = responsibleFilter;
