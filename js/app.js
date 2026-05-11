@@ -1504,6 +1504,84 @@ $('#exportBtn').addEventListener('click', () => {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `respaldo_gestion_juridica_${todayISO()}.json`; a.click(); URL.revokeObjectURL(a.href);
 });
 
+function parseCsv(text){
+  const rows = [];
+  let cur = '', row = [], inQuotes = false;
+  for(let i=0;i<text.length;i++){
+    const ch = text[i], nx = text[i+1];
+    if(ch === '"' && inQuotes && nx === '"'){ cur += '"'; i++; continue; }
+    if(ch === '"'){ inQuotes = !inQuotes; continue; }
+    if(ch === ',' && !inQuotes){ row.push(cur.trim()); cur = ''; continue; }
+    if((ch === '\n' || ch === '\r') && !inQuotes){
+      if(ch === '\r' && nx === '\n') i++;
+      if(cur.length || row.length){ row.push(cur.trim()); rows.push(row); row = []; cur = ''; }
+      continue;
+    }
+    cur += ch;
+  }
+  if(cur.length || row.length){ row.push(cur.trim()); rows.push(row); }
+  return rows;
+}
+function rowsToObjects(rows){
+  if(!rows.length) return [];
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1).filter(r => r.some(x => String(x).trim())).map(r => Object.fromEntries(headers.map((h,i)=>[h, r[i] ?? ''])));
+}
+function importClientesCsv(text){
+  const items = rowsToObjects(parseCsv(text));
+  let created = 0, updated = 0, skipped = 0;
+  items.forEach(c => {
+    const rut = String(c.rut || '').trim();
+    const correo = String(c.correo || '').trim().toLowerCase();
+    const existing = state.clientes.find(x => (rut && x.rut === rut) || (correo && String(x.correo||'').toLowerCase() === correo));
+    if(existing){
+      const replace = confirm(`Cliente duplicado (${existing.nombre}) por RUT/correo. ¿Deseas reemplazarlo?`);
+      if(!replace){ skipped++; return; }
+      upsert('clientes', { ...existing, tipo: c.tipo || existing.tipo, nombre: c.nombre || existing.nombre, rut: rut || existing.rut, correo: c.correo || existing.correo, telefono: c.telefono || existing.telefono, comuna: c.comuna || existing.comuna, region: c.region || existing.region, estado: c.estado || existing.estado, observaciones: c.observaciones || existing.observaciones });
+      updated++;
+      return;
+    }
+    upsert('clientes', { id: crypto.randomUUID(), tipo: c.tipo || 'Persona natural', nombre: c.nombre || 'Sin nombre', rut, correo: c.correo || '', telefono: c.telefono || '', comuna: c.comuna || '', region: c.region || 'Coquimbo', estado: c.estado || 'Activo', observaciones: c.observaciones || '', createdAt: new Date().toISOString() });
+    created++;
+  });
+  alert(`Importación clientes finalizada. Nuevos: ${created}, actualizados: ${updated}, omitidos: ${skipped}.`);
+}
+function importCausasCsv(text){
+  const items = rowsToObjects(parseCsv(text));
+  let created = 0, updated = 0, skipped = 0;
+  items.forEach(c => {
+    const rit = String(c.rit || '').trim();
+    const rol = String(c.rol || '').trim();
+    const existing = state.causas.find(x => (rit && x.rit === rit) || (rol && x.rol === rol));
+    if(existing){
+      const replace = confirm(`Causa duplicada (${existing.caratula || existing.rit || existing.rol}) por RIT/ROL. ¿Deseas reemplazarla?`);
+      if(!replace){ skipped++; return; }
+      upsert('causas', { ...existing, tribunal: c.tribunal || existing.tribunal, rit: rit || existing.rit, rol: rol || existing.rol, caratula: c.caratula || existing.caratula, estadoProcesal: c.estadoProcesal || existing.estadoProcesal, etapa: c.etapa || existing.etapa, proximaAudiencia: c.proximaAudiencia || existing.proximaAudiencia, link: c.link || existing.link, ultimaActuacion: todayISO() });
+      updated++;
+      return;
+    }
+    const asunto = state.asuntos.find(a => String(a.nombre||'').toLowerCase() === String(c.asuntoNombre || '').toLowerCase());
+    if(!asunto){ skipped++; return; }
+    upsert('causas', { id: crypto.randomUUID(), asuntoId: asunto.id, tribunal: c.tribunal || '', rit, rol, caratula: c.caratula || '', estadoProcesal: c.estadoProcesal || '', etapa: c.etapa || '', audiencias: c.proximaAudiencia ? [{ id: crypto.randomUUID(), tipo:'Preparatoria', fecha:c.proximaAudiencia, hora:'' }] : [], proximaAudiencia: c.proximaAudiencia || '', link: c.link || '', ultimaActuacion: todayISO() });
+    created++;
+  });
+  alert(`Importación causas finalizada. Nuevas: ${created}, actualizadas: ${updated}, omitidas: ${skipped}.`);
+}
+$('#importClientesCsvBtn')?.addEventListener('click', ()=>$('#importClientesCsvFile')?.click());
+$('#importCausasCsvBtn')?.addEventListener('click', ()=>$('#importCausasCsvFile')?.click());
+$('#importClientesCsvFile')?.addEventListener('change', e => {
+  const file = e.target.files?.[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => { importClientesCsv(String(reader.result || '')); renderAll(); e.target.value=''; };
+  reader.readAsText(file, 'utf-8');
+});
+$('#importCausasCsvFile')?.addEventListener('change', e => {
+  const file = e.target.files?.[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => { importCausasCsv(String(reader.result || '')); renderAll(); e.target.value=''; };
+  reader.readAsText(file, 'utf-8');
+});
+
 
 $('#importBtn').addEventListener('click', () => $('#importFile').click());
 $('#importFile').addEventListener('change', event => {

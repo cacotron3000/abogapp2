@@ -97,3 +97,36 @@ Solo modifica los primeros campos del cron:
 - `0 18 * * 1-5` → 18:00 lunes a viernes
 
 > Recomendación: verificar primero que el servidor tenga salida de correo habilitada para `mail()`.
+
+## Importación CSV por sección
+
+La app permite importar CSV directamente desde **Clientes** y **Causas judiciales**.
+
+### Regla de duplicados
+- **Clientes**: se detecta duplicado por `rut` o `correo`.
+- **Causas**: se detecta duplicado por `rit` o `rol`.
+- Si hay coincidencia, la app **pregunta si desea reemplazar** el registro existente.
+
+### Template CSV: Clientes
+Encabezados esperados:
+```csv
+tipo,nombre,rut,correo,telefono,comuna,region,estado,observaciones
+```
+Ejemplo:
+```csv
+Persona natural,Juan Pérez,12.345.678-9,juan@correo.cl,+56911112222,La Serena,Coquimbo,Activo,Cliente laboral
+Empresa,Comercial XYZ SpA,76.123.456-7,contacto@xyz.cl,+56512223344,Santiago,Metropolitana,Activo,Empresa con múltiples causas
+```
+
+### Template CSV: Causas
+Encabezados esperados:
+```csv
+asuntoNombre,tribunal,rit,rol,caratula,estadoProcesal,etapa,proximaAudiencia,link
+```
+Ejemplo:
+```csv
+Despido injustificado Pérez,Juzgado de Letras del Trabajo de La Serena,T-123-2026,123-2026,Pérez con XYZ,Audiencia preparatoria pendiente,Discusión,2026-05-15,https://oficinajudicialvirtual.pjud.cl/
+Cobro de pesos ABC,Juzgado Civil de Coquimbo,C-456-2026,456-2026,ABC con López,En tramitación,Prueba,2026-06-10,https://oficinajudicialvirtual.pjud.cl/
+```
+
+> Nota: `asuntoNombre` debe existir previamente en la app para asociar correctamente la causa al asunto.

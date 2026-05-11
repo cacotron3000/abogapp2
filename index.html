@@ -64,6 +64,8 @@
             <p>Personas naturales, empresas, sindicatos e instituciones.</p>
           </div>
           <div class="topbar-actions">
+            <button id="importClientesCsvBtn" type="button" class="secondary-btn">Importar CSV clientes</button>
+            <input id="importClientesCsvFile" type="file" accept=".csv,text/csv" hidden />
             <button id="quickWizardBtn" type="button" class="secondary-btn">Wizard rápido</button>
             <button class="primary-btn" data-open-modal="clienteModal">Nuevo cliente</button>
           </div>
@@ -90,7 +92,11 @@
             <h3>Causas judiciales</h3>
             <p>Control de tribunal, RIT/ROL, carátula, etapa y estado procesal.</p>
           </div>
-          <button class="primary-btn" data-open-modal="causaModal">Nueva causa</button>
+          <div class="topbar-actions">
+            <button id="importCausasCsvBtn" type="button" class="secondary-btn">Importar CSV causas</button>
+            <input id="importCausasCsvFile" type="file" accept=".csv,text/csv" hidden />
+            <button class="primary-btn" data-open-modal="causaModal">Nueva causa</button>
+          </div>
         </div>
         <div class="toolbar"><input id="causaSearch" placeholder="Buscar causa por tribunal, RIT, ROL o carátula..." /></div>
         <div id="causasList" class="table-wrap"></div>
