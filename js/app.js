@@ -1527,6 +1527,18 @@ function rowsToObjects(rows){
   const headers = rows[0].map(h => h.trim());
   return rows.slice(1).filter(r => r.some(x => String(x).trim())).map(r => Object.fromEntries(headers.map((h,i)=>[h, r[i] ?? ''])));
 }
+function csvEscape(value){
+  const s = String(value ?? '');
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+function downloadCsv(filename, headers, rows){
+  const lines = [headers.join(',')].concat(rows.map(r => headers.map(h => csvEscape(r[h])).join(',')));
+  const blob = new Blob([lines.join('\n')], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
 function importClientesCsv(text){
   const items = rowsToObjects(parseCsv(text));
   let created = 0, updated = 0, skipped = 0;
@@ -1569,6 +1581,16 @@ function importCausasCsv(text){
 }
 $('#importClientesCsvBtn')?.addEventListener('click', ()=>$('#importClientesCsvFile')?.click());
 $('#importCausasCsvBtn')?.addEventListener('click', ()=>$('#importCausasCsvFile')?.click());
+$('#exportClientesCsvBtn')?.addEventListener('click', () => {
+  const headers = ['tipo','nombre','rut','correo','telefono','comuna','region','estado','observaciones'];
+  const rows = state.clientes.map(c => ({ tipo:c.tipo, nombre:c.nombre, rut:c.rut, correo:c.correo, telefono:c.telefono, comuna:c.comuna, region:c.region, estado:c.estado, observaciones:c.observaciones }));
+  downloadCsv(`clientes_${todayISO()}.csv`, headers, rows);
+});
+$('#exportCausasCsvBtn')?.addEventListener('click', () => {
+  const headers = ['asuntoNombre','tribunal','rit','rol','caratula','estadoProcesal','etapa','proximaAudiencia','link'];
+  const rows = state.causas.map(c => ({ asuntoNombre:getAsunto(c.asuntoId)?.nombre || '', tribunal:c.tribunal, rit:c.rit, rol:c.rol, caratula:c.caratula, estadoProcesal:c.estadoProcesal, etapa:c.etapa, proximaAudiencia:c.proximaAudiencia, link:c.link }));
+  downloadCsv(`causas_${todayISO()}.csv`, headers, rows);
+});
 $('#importClientesCsvFile')?.addEventListener('change', e => {
   const file = e.target.files?.[0]; if(!file) return;
   const reader = new FileReader();

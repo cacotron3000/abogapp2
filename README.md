@@ -100,7 +100,7 @@ Solo modifica los primeros campos del cron:
 
 ## Importación CSV por sección
 
-La app permite importar CSV directamente desde **Clientes** y **Causas judiciales**.
+La app permite importar y exportar CSV directamente desde **Clientes** y **Causas judiciales**.
 
 ### Regla de duplicados
 - **Clientes**: se detecta duplicado por `rut` o `correo`.
