@@ -1572,9 +1572,13 @@ function importCausasCsv(text){
       updated++;
       return;
     }
-    const asunto = state.asuntos.find(a => String(a.nombre||'').toLowerCase() === String(c.asuntoNombre || '').toLowerCase());
-    if(!asunto){ skipped++; return; }
-    upsert('causas', { id: crypto.randomUUID(), asuntoId: asunto.id, tribunal: c.tribunal || '', rit, rol, caratula: c.caratula || '', estadoProcesal: c.estadoProcesal || '', etapa: c.etapa || '', audiencias: c.proximaAudiencia ? [{ id: crypto.randomUUID(), tipo:'Preparatoria', fecha:c.proximaAudiencia, hora:'' }] : [], proximaAudiencia: c.proximaAudiencia || '', link: c.link || '', ultimaActuacion: todayISO() });
+    let asunto = state.asuntos.find(a => String(a.nombre||'').toLowerCase() === String(c.asuntoNombre || '').toLowerCase());
+    if(!asunto){
+      const asuntoId = crypto.randomUUID();
+      upsert('asuntos', { id: asuntoId, clienteId: '', nombre: c.asuntoNombre || c.caratula || `Causa ${rit || rol || created+1}`, tipo: 'Judicial', area: c.area || 'Laboral', materia: c.materia || '', prioridad: c.prioridad || 'Media', estado: c.estadoAsunto || 'Activo', responsableIds: [], responsableId: '', observaciones: 'Creado automáticamente durante importación CSV de causas.', fechaIngreso: todayISO(), archivado: false });
+      asunto = getAsunto(asuntoId);
+    }
+    upsert('causas', { id: crypto.randomUUID(), asuntoId: asunto?.id || '', tribunal: c.tribunal || '', rit, rol, caratula: c.caratula || '', estadoProcesal: c.estadoProcesal || '', etapa: c.etapa || '', audiencias: c.proximaAudiencia ? [{ id: crypto.randomUUID(), tipo:'Preparatoria', fecha:c.proximaAudiencia, hora:'' }] : [], proximaAudiencia: c.proximaAudiencia || '', link: c.link || '', ultimaActuacion: todayISO() });
     created++;
   });
   alert(`Importación causas finalizada. Nuevas: ${created}, actualizadas: ${updated}, omitidas: ${skipped}.`);

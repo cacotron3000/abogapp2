@@ -129,4 +129,4 @@ Despido injustificado Pérez,Juzgado de Letras del Trabajo de La Serena,T-123-20
 Cobro de pesos ABC,Juzgado Civil de Coquimbo,C-456-2026,456-2026,ABC con López,En tramitación,Prueba,2026-06-10,https://oficinajudicialvirtual.pjud.cl/
 ```
 
-> Nota: `asuntoNombre` debe existir previamente en la app para asociar correctamente la causa al asunto.
+> Nota: si `asuntoNombre` no existe, la app crea automáticamente un asunto judicial para incorporar la causa no duplicada.
