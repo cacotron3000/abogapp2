@@ -152,3 +152,10 @@ npm install playwright
 
 ### Nota importante
 El worker viene con estructura base y debe ajustar selectores reales de login/consulta de OJV según cambios del portal y políticas de uso vigentes.
+
+### Troubleshooting OJV: "No se pudo ejecutar worker OJV"
+Si aparece ese mensaje:
+1. Verifica que Node esté instalado y accesible (`node -v`).
+2. Verifica dependencia Playwright (`npm install playwright`).
+3. Revisa `backend/config.php` (`ojv_node_bin`, `ojv_username`, `ojv_password`).
+4. Revisa detalle del error devuelto por backend (`detail`) para conocer `stderr` del proceso.

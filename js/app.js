@@ -65,7 +65,7 @@ async function apiOJV(action, payload = {}){
     body: JSON.stringify({ action, ...payload })
   });
   const data = await res.json().catch(()=>({ ok:false, error:'Respuesta inválida del servidor OJV' }));
-  if(!res.ok || !data.ok) throw new Error(data.error || `Error HTTP ${res.status}`);
+  if(!res.ok || !data.ok) throw new Error(data.detail ? `${data.error}: ${data.detail}` : (data.error || `Error HTTP ${res.status}`));
   return data;
 }
 async function pullFromCpanelDb(){
