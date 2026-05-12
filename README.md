@@ -133,6 +133,8 @@ Cobro de pesos ABC,Juzgado Civil de Coquimbo,C-456-2026,456-2026,ABC con López,
 
 ## Integración OJV con Automatización autenticada (RPA)
 
+> Estado actual: la sincronización con OJV está **desactivada temporalmente** en la app.
+
 Se incluye base para sincronizar causas con Oficina Judicial Virtual mediante automatización autenticada:
 
 - Endpoint backend: `backend/ojv_sync.php`

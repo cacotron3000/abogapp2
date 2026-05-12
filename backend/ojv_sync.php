@@ -3,6 +3,9 @@ header('Content-Type: application/json; charset=utf-8');
 $configFile = __DIR__ . '/config.php';
 if (!file_exists($configFile)) { http_response_code(500); echo json_encode(['ok'=>false,'error'=>'Falta backend/config.php']); exit; }
 $config = require $configFile;
+http_response_code(503);
+echo json_encode(['ok'=>false,'error'=>'Sincronización OJV desactivada temporalmente']);
+exit;
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
 $action = $input['action'] ?? '';
 if (!in_array($action, ['auth_test','sync_causa'], true)) { http_response_code(400); echo json_encode(['ok'=>false,'error'=>'Acción inválida']); exit; }

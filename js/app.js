@@ -58,6 +58,8 @@ async function apiNotify(action, payload = {}){
   if(!res.ok || !data.ok) throw new Error(data.error || `Error HTTP ${res.status}`);
   return data;
 }
+const OJV_SYNC_ENABLED = false;
+
 async function apiOJV(action, payload = {}){
   const res = await fetch('backend/ojv_sync.php', {
     method: 'POST',
@@ -934,9 +936,13 @@ function openAsuntoDetalle(id){
 }
 function openCausaDetalle(id){
   const c = state.causas.find(x=>x.id===id); if(!c) return; const a = getAsunto(c.asuntoId);
-  openEntidadDetalle({estado:c.estadoProcesal || 'Causa', badge:'ok', titulo:c.caratula || a?.nombre || 'Causa judicial', subtitulo:`${c.tribunal || 'Sin tribunal'} · ${c.rit || c.rol || 'Sin RIT/ROL'}`, contenido:`<div class="detail-grid">${detailItem('Asunto', a?.nombre)}${detailItem('Cliente', getCliente(a?.clienteId)?.nombre)}${detailItem('Tribunal', c.tribunal)}${detailItem('RIT', c.rit)}${detailItem('ROL', c.rol)}${detailItem('Carátula', c.caratula)}${detailItem('Estado procesal', c.estadoProcesal)}${detailItem('Etapa', c.etapa)}${detailItem('Próxima audiencia', fmtDate(c.proximaAudiencia))}${detailItem('Última actuación', fmtDate(c.ultimaActuacion))}<div class="detail-item wide"><span>Link PJUD</span><strong>${c.link ? `<a href="${safe(c.link)}" target="_blank" rel="noopener">Abrir enlace</a>` : '—'}</strong></div></div>`, acciones:`<button type="button" class="primary-btn" onclick="event.stopPropagation(); editCausa('${id}')">Editar información</button><button type="button" class="secondary-btn" onclick="event.stopPropagation(); syncCausaOJV('${id}')">Sincronizar OJV</button>${causaActiva(c)?`<button type="button" class="secondary-btn" onclick="completeCausa('${id}'); closeModals();">Completar y archivar</button>`:''}<button type="button" class="secondary-btn close-modal">Cerrar</button>`});
+  openEntidadDetalle({estado:c.estadoProcesal || 'Causa', badge:'ok', titulo:c.caratula || a?.nombre || 'Causa judicial', subtitulo:`${c.tribunal || 'Sin tribunal'} · ${c.rit || c.rol || 'Sin RIT/ROL'}`, contenido:`<div class="detail-grid">${detailItem('Asunto', a?.nombre)}${detailItem('Cliente', getCliente(a?.clienteId)?.nombre)}${detailItem('Tribunal', c.tribunal)}${detailItem('RIT', c.rit)}${detailItem('ROL', c.rol)}${detailItem('Carátula', c.caratula)}${detailItem('Estado procesal', c.estadoProcesal)}${detailItem('Etapa', c.etapa)}${detailItem('Próxima audiencia', fmtDate(c.proximaAudiencia))}${detailItem('Última actuación', fmtDate(c.ultimaActuacion))}<div class="detail-item wide"><span>Link PJUD</span><strong>${c.link ? `<a href="${safe(c.link)}" target="_blank" rel="noopener">Abrir enlace</a>` : '—'}</strong></div></div>`, acciones:`<button type="button" class="primary-btn" onclick="event.stopPropagation(); editCausa('${id}')">Editar información</button>${OJV_SYNC_ENABLED ? `<button type="button" class="secondary-btn" onclick="event.stopPropagation(); syncCausaOJV('${id}')">Sincronizar OJV</button>` : ''}${causaActiva(c)?`<button type="button" class="secondary-btn" onclick="completeCausa('${id}'); closeModals();">Completar y archivar</button>`:''}<button type="button" class="secondary-btn close-modal">Cerrar</button>`});
 }
 async function syncCausaOJV(id){
+  if(!OJV_SYNC_ENABLED){
+    alert('La sincronización con OJV está desactivada temporalmente en AbogApp.');
+    return;
+  }
   const c = state.causas.find(x=>x.id===id); if(!c) return;
   try{
     const creds = ensureCurrentUserOJVCredentials();
