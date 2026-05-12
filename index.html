@@ -19,7 +19,6 @@
         <input type="password" id="loginPassword" value="admin123" required />
         <button type="submit">Ingresar</button>
       </form>
-      <small>Usuario demo: admin@gjabogados.cl / admin123</small>
     </div>
   </section>
 
@@ -27,7 +26,10 @@
     <aside class="sidebar">
       <div class="sidebar-brand">
         <img src="assets/logo-gj.png" alt="Gorroño Jara Abogados" class="sidebar-logo" />
-        <div id="sidebarUserName" class="sidebar-user-name">Usuario</div>
+        <div class="sidebar-user-wrap">
+          <img id="sidebarUserPhoto" class="sidebar-user-photo hidden" alt="Foto usuario" />
+          <button id="sidebarUserName" type="button" class="sidebar-user-name profile-trigger">Usuario</button>
+        </div>
       </div>
       <nav class="nav">
         <button class="nav-item active" data-view="dashboard">Dashboard</button>
@@ -37,9 +39,11 @@
         <button class="nav-item" data-view="tareas">Tareas</button>
         <button class="nav-item" data-view="plazos">Plazos</button>
         <button class="nav-item" data-view="archivo">Archivo</button>
+        <button class="nav-item" data-view="utilidades">Utilidades</button>
         <button class="nav-item" data-view="usuarios">Usuarios</button>
       </nav>
       <button id="logoutBtn" class="logout-btn">Cerrar sesión</button>
+      <div id="syncStatus" class="sync-status">Sincronización: pendiente</div>
     </aside>
 
     <main class="main">
@@ -48,12 +52,7 @@
           <h2 id="viewTitle">Dashboard</h2>
           <p id="viewSubtitle">Resumen operativo del estudio</p>
         </div>
-        <div class="topbar-actions">
-          <button id="seedBtn" class="secondary-btn">Cargar datos demo</button>
-          <button id="importBtn" class="secondary-btn">Importar JSON</button>
-          <input id="importFile" type="file" accept="application/json,.json" hidden />
-          <button id="exportBtn" class="secondary-btn">Exportar JSON</button>
-        </div>
+        <div class="topbar-actions"></div>
       </header>
 
       <section id="dashboardView" class="view active-view"></section>
@@ -64,7 +63,13 @@
             <h3>Clientes</h3>
             <p>Personas naturales, empresas, sindicatos e instituciones.</p>
           </div>
-          <button class="primary-btn" data-open-modal="clienteModal">Nuevo cliente</button>
+          <div class="topbar-actions">
+            <button id="importClientesCsvBtn" type="button" class="secondary-btn">Importar CSV clientes</button>
+            <button id="exportClientesCsvBtn" type="button" class="secondary-btn">Exportar CSV clientes</button>
+            <input id="importClientesCsvFile" type="file" accept=".csv,text/csv" hidden />
+            <button id="quickWizardBtn" type="button" class="secondary-btn">Wizard rápido</button>
+            <button class="primary-btn" data-open-modal="clienteModal">Nuevo cliente</button>
+          </div>
         </div>
         <div class="toolbar"><input id="clienteSearch" placeholder="Buscar cliente por nombre, RUT o correo..." /></div>
         <div id="clientesList" class="cards-grid"></div>
@@ -88,7 +93,12 @@
             <h3>Causas judiciales</h3>
             <p>Control de tribunal, RIT/ROL, carátula, etapa y estado procesal.</p>
           </div>
-          <button class="primary-btn" data-open-modal="causaModal">Nueva causa</button>
+          <div class="topbar-actions">
+            <button id="importCausasCsvBtn" type="button" class="secondary-btn">Importar CSV causas</button>
+            <button id="exportCausasCsvBtn" type="button" class="secondary-btn">Exportar CSV causas</button>
+            <input id="importCausasCsvFile" type="file" accept=".csv,text/csv" hidden />
+            <button class="primary-btn" data-open-modal="causaModal">Nueva causa</button>
+          </div>
         </div>
         <div class="toolbar"><input id="causaSearch" placeholder="Buscar causa por tribunal, RIT, ROL o carátula..." /></div>
         <div id="causasList" class="table-wrap"></div>
@@ -117,6 +127,25 @@
       </section>
 
       <section id="archivoView" class="view"></section>
+
+      <section id="utilidadesView" class="view">
+        <div class="section-header">
+          <div>
+            <h3>Utilidades</h3>
+            <p>Herramientas de sincronización y transferencia de datos.</p>
+          </div>
+        </div>
+        <div class="toolbar">
+          <button id="syncPullBtn" class="secondary-btn">Leer DB cPanel</button>
+          <button id="syncPushBtn" class="secondary-btn">Escribir DB cPanel</button>
+          <button id="importBtn" class="secondary-btn">Importar JSON</button>
+          <input id="importFile" type="file" accept="application/json,.json" hidden />
+          <button id="exportBtn" class="secondary-btn">Exportar JSON</button>
+        </div>
+        <div id="templatesPanel" class="content-card"></div>
+        <div id="actividadPanel" class="content-card"></div>
+        <div id="notificacionesPanel" class="content-card"></div>
+      </section>
 
       <section id="usuariosView" class="view">
         <div class="section-header">
@@ -188,19 +217,30 @@
       <h3>Nuevo asunto</h3>
       <input type="hidden" id="asuntoId" />
       <div class="form-grid">
-        <label>Cliente<select id="asuntoCliente" required></select></label>
-        <label>Nombre del asunto<input id="asuntoNombre" required /></label>
+        <label class="wide">Plantilla<select id="asuntoTemplateSelect"><option value="">Sin plantilla</option></select><button type="button" id="asuntoApplyTemplateBtn" class="mini-btn">Aplicar plantilla</button></label>
         <label>Tipo<select id="asuntoTipo"><option>Judicial</option><option>Extrajudicial</option></select></label>
+        <label>Cliente<select id="asuntoCliente" required></select></label>
+        <label>Nombre del asunto<input id="asuntoNombre" list="asuntoNombreSugerencias" required /></label>
         <label>Área<select id="asuntoArea"><option>Laboral</option><option>Civil</option><option>Familia</option><option>Policía Local</option><option>Corte de Apelaciones</option><option>Corte Suprema</option><option>Otro</option></select></label>
-        <label>Materia<input id="asuntoMateria" /></label>
+        <label>Materia<input id="asuntoMateria" list="asuntoMateriaSugerencias" /></label>
         <label>Prioridad<select id="asuntoPrioridad"><option>Baja</option><option>Media</option><option>Alta</option><option>Urgente</option></select></label>
         <label>Estado<select id="asuntoEstado"><option>Nuevo</option><option>En análisis</option><option>En preparación</option><option>Activo</option><option>En espera</option><option>Terminado</option><option>Archivado</option></select></label>
         <label>Responsable(s)<select id="asuntoResponsable" multiple></select><small>Puede seleccionar uno o más responsables.</small></label>
+        <label class="judicial-only">Tribunal<input id="asuntoCausaTribunal" placeholder="Juzgado de Letras del Trabajo de La Serena" /></label>
+        <label class="judicial-only">RIT<input id="asuntoCausaRit" title="RIT: Rol Interno de Tribunal (identificador interno de la causa)." /></label>
+        <label class="judicial-only">ROL<input id="asuntoCausaRol" title="ROL: número de rol público/externo de la causa." /></label>
+        <label class="wide judicial-only">Carátula<input id="asuntoCausaCaratula" /></label>
+        <label class="judicial-only">Estado procesal<input id="asuntoCausaEstado" placeholder="Audiencia preparatoria pendiente" /></label>
+        <label class="judicial-only">Etapa<input id="asuntoCausaEtapa" placeholder="Discusión / Prueba / Recursos" title="Etapa procesal actual en que se encuentra la causa." /></label>
+        <label class="judicial-only">Próxima audiencia<input id="asuntoCausaAudiencia" type="date" /></label>
+        <label class="wide judicial-only">Link PJUD<input id="asuntoCausaLink" type="url" /></label>
         <label class="wide">Observaciones<textarea id="asuntoObs"></textarea></label>
       </div>
       <div class="modal-actions"><button type="button" class="secondary-btn close-modal">Cancelar</button><button class="primary-btn">Guardar</button></div>
     </form>
   </dialog>
+  <datalist id="asuntoNombreSugerencias"></datalist>
+  <datalist id="asuntoMateriaSugerencias"></datalist>
 
   <dialog id="causaModal" class="modal">
     <form id="causaForm" method="dialog">
@@ -210,12 +250,15 @@
         <label>Cliente opcional<select id="causaClienteFiltro"><option value="">Todos los clientes</option></select></label>
         <label>Asunto judicial<select id="causaAsunto" required></select></label>
         <label>Tribunal<input id="causaTribunal" required placeholder="Juzgado de Letras del Trabajo de La Serena" /></label>
-        <label>RIT<input id="causaRit" /></label>
-        <label>ROL<input id="causaRol" /></label>
+        <label>RIT<input id="causaRit" title="RIT: Rol Interno de Tribunal (identificador interno de la causa)." /></label>
+        <label>ROL<input id="causaRol" title="ROL: número de rol público/externo de la causa." /></label>
         <label class="wide">Carátula<input id="causaCaratula" /></label>
         <label>Estado procesal<input id="causaEstado" placeholder="Audiencia preparatoria pendiente" /></label>
-        <label>Etapa<input id="causaEtapa" placeholder="Discusión / Prueba / Recursos" /></label>
-        <label>Próxima audiencia<input id="causaAudiencia" type="date" /></label>
+        <label>Etapa<input id="causaEtapa" placeholder="Discusión / Prueba / Recursos" title="Etapa procesal actual en que se encuentra la causa." /></label>
+        <label class="wide">Audiencias
+          <div id="causaAudienciasContainer" class="audiencias-container"></div>
+          <button type="button" id="addAudienciaBtn" class="secondary-btn small-action">+ Agregar audiencia</button>
+        </label>
         <label class="wide">Link PJUD<input id="causaLink" type="url" /></label>
       </div>
       <div class="modal-actions"><button type="button" class="secondary-btn close-modal">Cancelar</button><button class="primary-btn">Guardar</button></div>
@@ -227,6 +270,7 @@
       <h3>Nueva tarea</h3>
       <input type="hidden" id="tareaId" />
       <div class="form-grid">
+        <label class="wide">Plantilla<select id="tareaTemplateSelect"><option value="">Sin plantilla</option></select><button type="button" id="tareaApplyTemplateBtn" class="mini-btn">Aplicar plantilla</button></label>
         <label>Cliente opcional<select id="tareaClienteFiltro"><option value="">Todos los clientes</option></select></label>
         <label>Asunto<select id="tareaAsunto"></select></label>
         <label>Título<input id="tareaTitulo" required /></label>
@@ -245,12 +289,14 @@
       <h3>Nuevo plazo</h3>
       <input type="hidden" id="plazoId" />
       <div class="form-grid">
+        <label class="wide">Plantilla<select id="plazoTemplateSelect"><option value="">Sin plantilla</option></select><button type="button" id="plazoApplyTemplateBtn" class="mini-btn">Aplicar plantilla</button></label>
         <label>Cliente opcional<select id="plazoClienteFiltro"><option value="">Todos los clientes</option></select></label>
         <label>Asunto<select id="plazoAsunto"></select></label>
         <label>Nombre<input id="plazoNombre" required /></label>
         <label>Inicio<input id="plazoInicio" type="date" /></label>
+        <label>Días de plazo<input id="plazoDias" type="number" min="1" placeholder="Ej. 5" /></label>
         <label>Vencimiento<input id="plazoVencimiento" type="date" required /></label>
-        <label>Tipo de días<select id="plazoTipo"><option>Judiciales</option><option>Corridos</option><option>Hábiles</option></select></label>
+        <label>Tipo de días<select id="plazoTipo" title="Corridos: lunes a domingo. Hábiles judiciales: lunes a sábado, excluye domingos y feriados de Chile. Hábiles administrativos: lunes a viernes, excluye sábados, domingos y feriados de Chile."><option>Días corridos</option><option>Días hábiles judiciales</option><option>Días hábiles administrativos</option></select></label>
         <label>Responsable(s)<select id="plazoResponsable" multiple></select><small>Puede seleccionar uno o más responsables.</small></label>
         <label>Estado<select id="plazoEstado"><option>Vigente</option><option>Cumplido</option><option>Vencido</option><option>Suspendido</option></select></label>
         <label class="wide">Observaciones<textarea id="plazoObs"></textarea></label>
@@ -292,12 +338,40 @@
       <div class="form-grid">
         <label>Nombre<input id="usuarioNombre" required /></label>
         <label>Correo<input id="usuarioCorreo" type="email" required /></label>
+        <label>Contraseña<input id="usuarioPassword" type="password" minlength="6" required /></label>
         <label>Rol<select id="usuarioRol"><option>Administrador</option><option>Abogado</option><option>Asistente</option></select></label>
         <label>Estado<select id="usuarioActivo"><option value="true">Activo</option><option value="false">Inactivo</option></select></label>
       </div>
       <div class="modal-actions"><button type="button" class="secondary-btn close-modal">Cancelar</button><button class="primary-btn">Guardar</button></div>
     </form>
   </dialog>
+
+  <dialog id="perfilModal" class="modal">
+    <form id="perfilForm">
+      <h3>Mi perfil</h3>
+      <div class="form-grid">
+        <div>
+          <span>Foto de perfil</span>
+          <input id="perfilFoto" type="file" accept="image/*" hidden />
+          <button type="button" id="perfilFotoBtn" class="secondary-btn">Subir foto</button>
+          <small id="perfilFotoLoading" class="hidden">Cargando imagen...</small>
+          <img id="perfilFotoPreview" alt="Foto de perfil" class="perfil-foto" style="display:none;" />
+          <div id="perfilFotoMenu" class="hidden" style="margin-top:8px;display:grid;gap:6px;max-width:180px;">
+            <button type="button" id="perfilCambiarFotoBtn" class="secondary-btn">Cambiar foto</button>
+            <button type="button" id="perfilEliminarFotoBtn" class="danger-btn">Eliminar foto</button>
+          </div>
+        </div>
+        <label>Nombre<input id="perfilNombre" required /></label>
+        <label>Correo<input id="perfilCorreo" type="email" required /></label>
+        <label>Rol<input id="perfilRol" disabled /></label>
+        <label>Nueva contraseña<input id="perfilPassword" type="password" minlength="6" placeholder="Opcional" /></label>
+        <label>Confirmar contraseña<input id="perfilPassword2" type="password" minlength="6" placeholder="Opcional" /></label>
+      </div>
+      <div id="perfilStats" class="notice"></div>
+      <div class="modal-actions"><button type="button" class="secondary-btn close-modal">Cerrar</button><button id="perfilGuardarBtn" type="submit" class="primary-btn">Guardar cambios</button></div>
+    </form>
+  </dialog>
+
 
   <script src="js/jszip.min.js"></script>
   <script src="js/app.js"></script>
