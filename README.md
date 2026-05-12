@@ -159,3 +159,10 @@ Si aparece ese mensaje:
 2. Verifica dependencia Playwright (`npm install playwright`).
 3. Revisa `backend/config.php` (`ojv_node_bin`, `ojv_username`, `ojv_password`).
 4. Revisa detalle del error devuelto por backend (`detail`) para conocer `stderr` del proceso.
+
+### Credenciales OJV por usuario
+Al usar **Sincronizar OJV** por primera vez, la app solicita por ventana emergente:
+- Usuario OJV
+- Clave OJV
+
+Estas credenciales se guardan en el perfil local del usuario de la app y se envían al backend `ojv_sync.php` para ejecutar la automatización autenticada.

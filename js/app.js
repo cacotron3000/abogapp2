@@ -939,7 +939,9 @@ function openCausaDetalle(id){
 async function syncCausaOJV(id){
   const c = state.causas.find(x=>x.id===id); if(!c) return;
   try{
-    const data = await apiOJV('sync_causa', { rit: c.rit || '', rol: c.rol || '' });
+    const creds = ensureCurrentUserOJVCredentials();
+    if(!creds) return;
+    const data = await apiOJV('sync_causa', { rit: c.rit || '', rol: c.rol || '', username: creds.username, password: creds.password });
     const upd = data.causa || {};
     upsert('causas', { ...c, tribunal: upd.tribunal || c.tribunal, estadoProcesal: upd.estadoProcesal || c.estadoProcesal, etapa: upd.etapa || c.etapa, proximaAudiencia: upd.proximaAudiencia || c.proximaAudiencia, link: upd.link || c.link, ultimaActuacion: todayISO() });
     openCausaDetalle(id);
@@ -949,6 +951,17 @@ async function syncCausaOJV(id){
   }
 }
 window.syncCausaOJV = syncCausaOJV;
+function ensureCurrentUserOJVCredentials(){
+  const u = currentUser();
+  if(!u) return null;
+  if(u.ojvUsername && u.ojvPassword) return { username: u.ojvUsername, password: u.ojvPassword };
+  const username = prompt('Ingrese su usuario de Oficina Judicial Virtual (OJV):');
+  if(!username) return null;
+  const password = prompt('Ingrese su clave OJV:');
+  if(!password) return null;
+  upsert('users', { id: u.id, ojvUsername: username.trim(), ojvPassword: password });
+  return { username: username.trim(), password };
+}
 function openTareaDetalle(id){
   const t = state.tareas.find(x=>x.id===id); if(!t) return; const a = getAsunto(t.asuntoId);
   openEntidadDetalle({estado:t.estado || 'Tarea', badge:badgeClass(t.prioridad), titulo:t.titulo, subtitulo:`${a?.nombre || 'Sin asunto'} · Responsable: ${getResponsableNames(t) || 'Sin responsable'}`, contenido:`<div class="detail-grid">${detailItem('Asunto', a?.nombre)}${detailItem('Cliente', getCliente(a?.clienteId)?.nombre)}${detailItem('Responsable', getResponsableNames(t))}${detailItem('Vencimiento', fmtDate(t.vencimiento))}${detailItem('Prioridad', t.prioridad)}${detailItem('Estado', t.estado)}${detailItem('Archivada', t.archivada ? 'Sí' : 'No')}${detailItem('Completada', t.completada ? 'Sí' : 'No')}<div class="detail-item wide"><span>Descripción</span><strong>${safe(t.descripcion || 'Sin descripción')}</strong></div></div>`, acciones:`<button type="button" class="primary-btn" onclick="event.stopPropagation(); editTarea('${id}')">Editar información</button>${!t.archivada && t.estado!=='Terminada'?`<button type="button" class="secondary-btn" onclick="completeTarea('${id}'); closeModals();">Completar y archivar</button>`:''}<button type="button" class="secondary-btn close-modal">Cerrar</button>`});

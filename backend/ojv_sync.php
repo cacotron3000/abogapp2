@@ -14,8 +14,8 @@ if (!$worker) { http_response_code(500); echo json_encode(['ok'=>false,'error'=>
 $payload = [
   'action' => $action,
   'credentials' => [
-    'username' => (string)($config['ojv_username'] ?? ''),
-    'password' => (string)($config['ojv_password'] ?? ''),
+    'username' => (string)($input['username'] ?? $config['ojv_username'] ?? ''),
+    'password' => (string)($input['password'] ?? $config['ojv_password'] ?? ''),
   ],
   'rit' => (string)($input['rit'] ?? ''),
   'rol' => (string)($input['rol'] ?? ''),
