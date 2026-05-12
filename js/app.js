@@ -58,6 +58,16 @@ async function apiNotify(action, payload = {}){
   if(!res.ok || !data.ok) throw new Error(data.error || `Error HTTP ${res.status}`);
   return data;
 }
+async function apiOJV(action, payload = {}){
+  const res = await fetch('backend/ojv_sync.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...payload })
+  });
+  const data = await res.json().catch(()=>({ ok:false, error:'Respuesta inválida del servidor OJV' }));
+  if(!res.ok || !data.ok) throw new Error(data.error || `Error HTTP ${res.status}`);
+  return data;
+}
 async function pullFromCpanelDb(){
   if(isPullingFromDb) return;
   isPullingFromDb = true;
@@ -924,8 +934,21 @@ function openAsuntoDetalle(id){
 }
 function openCausaDetalle(id){
   const c = state.causas.find(x=>x.id===id); if(!c) return; const a = getAsunto(c.asuntoId);
-  openEntidadDetalle({estado:c.estadoProcesal || 'Causa', badge:'ok', titulo:c.caratula || a?.nombre || 'Causa judicial', subtitulo:`${c.tribunal || 'Sin tribunal'} · ${c.rit || c.rol || 'Sin RIT/ROL'}`, contenido:`<div class="detail-grid">${detailItem('Asunto', a?.nombre)}${detailItem('Cliente', getCliente(a?.clienteId)?.nombre)}${detailItem('Tribunal', c.tribunal)}${detailItem('RIT', c.rit)}${detailItem('ROL', c.rol)}${detailItem('Carátula', c.caratula)}${detailItem('Estado procesal', c.estadoProcesal)}${detailItem('Etapa', c.etapa)}${detailItem('Próxima audiencia', fmtDate(c.proximaAudiencia))}${detailItem('Última actuación', fmtDate(c.ultimaActuacion))}<div class="detail-item wide"><span>Link PJUD</span><strong>${c.link ? `<a href="${safe(c.link)}" target="_blank" rel="noopener">Abrir enlace</a>` : '—'}</strong></div></div>`, acciones:`<button type="button" class="primary-btn" onclick="event.stopPropagation(); editCausa('${id}')">Editar información</button>${causaActiva(c)?`<button type="button" class="secondary-btn" onclick="completeCausa('${id}'); closeModals();">Completar y archivar</button>`:''}<button type="button" class="secondary-btn close-modal">Cerrar</button>`});
+  openEntidadDetalle({estado:c.estadoProcesal || 'Causa', badge:'ok', titulo:c.caratula || a?.nombre || 'Causa judicial', subtitulo:`${c.tribunal || 'Sin tribunal'} · ${c.rit || c.rol || 'Sin RIT/ROL'}`, contenido:`<div class="detail-grid">${detailItem('Asunto', a?.nombre)}${detailItem('Cliente', getCliente(a?.clienteId)?.nombre)}${detailItem('Tribunal', c.tribunal)}${detailItem('RIT', c.rit)}${detailItem('ROL', c.rol)}${detailItem('Carátula', c.caratula)}${detailItem('Estado procesal', c.estadoProcesal)}${detailItem('Etapa', c.etapa)}${detailItem('Próxima audiencia', fmtDate(c.proximaAudiencia))}${detailItem('Última actuación', fmtDate(c.ultimaActuacion))}<div class="detail-item wide"><span>Link PJUD</span><strong>${c.link ? `<a href="${safe(c.link)}" target="_blank" rel="noopener">Abrir enlace</a>` : '—'}</strong></div></div>`, acciones:`<button type="button" class="primary-btn" onclick="event.stopPropagation(); editCausa('${id}')">Editar información</button><button type="button" class="secondary-btn" onclick="event.stopPropagation(); syncCausaOJV('${id}')">Sincronizar OJV</button>${causaActiva(c)?`<button type="button" class="secondary-btn" onclick="completeCausa('${id}'); closeModals();">Completar y archivar</button>`:''}<button type="button" class="secondary-btn close-modal">Cerrar</button>`});
 }
+async function syncCausaOJV(id){
+  const c = state.causas.find(x=>x.id===id); if(!c) return;
+  try{
+    const data = await apiOJV('sync_causa', { rit: c.rit || '', rol: c.rol || '' });
+    const upd = data.causa || {};
+    upsert('causas', { ...c, tribunal: upd.tribunal || c.tribunal, estadoProcesal: upd.estadoProcesal || c.estadoProcesal, etapa: upd.etapa || c.etapa, proximaAudiencia: upd.proximaAudiencia || c.proximaAudiencia, link: upd.link || c.link, ultimaActuacion: todayISO() });
+    openCausaDetalle(id);
+    showSyncMessage('Causa sincronizada con OJV.');
+  }catch(err){
+    alert(`No se pudo sincronizar con OJV: ${err.message}`);
+  }
+}
+window.syncCausaOJV = syncCausaOJV;
 function openTareaDetalle(id){
   const t = state.tareas.find(x=>x.id===id); if(!t) return; const a = getAsunto(t.asuntoId);
   openEntidadDetalle({estado:t.estado || 'Tarea', badge:badgeClass(t.prioridad), titulo:t.titulo, subtitulo:`${a?.nombre || 'Sin asunto'} · Responsable: ${getResponsableNames(t) || 'Sin responsable'}`, contenido:`<div class="detail-grid">${detailItem('Asunto', a?.nombre)}${detailItem('Cliente', getCliente(a?.clienteId)?.nombre)}${detailItem('Responsable', getResponsableNames(t))}${detailItem('Vencimiento', fmtDate(t.vencimiento))}${detailItem('Prioridad', t.prioridad)}${detailItem('Estado', t.estado)}${detailItem('Archivada', t.archivada ? 'Sí' : 'No')}${detailItem('Completada', t.completada ? 'Sí' : 'No')}<div class="detail-item wide"><span>Descripción</span><strong>${safe(t.descripcion || 'Sin descripción')}</strong></div></div>`, acciones:`<button type="button" class="primary-btn" onclick="event.stopPropagation(); editTarea('${id}')">Editar información</button>${!t.archivada && t.estado!=='Terminada'?`<button type="button" class="secondary-btn" onclick="completeTarea('${id}'); closeModals();">Completar y archivar</button>`:''}<button type="button" class="secondary-btn close-modal">Cerrar</button>`});

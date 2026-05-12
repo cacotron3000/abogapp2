@@ -130,3 +130,25 @@ Cobro de pesos ABC,Juzgado Civil de Coquimbo,C-456-2026,456-2026,ABC con López,
 ```
 
 > Nota: si `asuntoNombre` no existe, la app crea automáticamente un asunto judicial para incorporar la causa no duplicada.
+
+## Integración OJV con Automatización autenticada (RPA)
+
+Se incluye base para sincronizar causas con Oficina Judicial Virtual mediante automatización autenticada:
+
+- Endpoint backend: `backend/ojv_sync.php`
+- Worker RPA: `scripts/ojv_worker.mjs` (Playwright)
+- Acción UI: botón **Sincronizar OJV** en detalle de causa.
+
+### Configuración
+En `backend/config.php` agregar:
+- `ojv_username`
+- `ojv_password`
+- `ojv_node_bin` (por defecto `node`)
+
+### Dependencias del worker
+```bash
+npm install playwright
+```
+
+### Nota importante
+El worker viene con estructura base y debe ajustar selectores reales de login/consulta de OJV según cambios del portal y políticas de uso vigentes.
