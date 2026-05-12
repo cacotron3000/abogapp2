@@ -147,6 +147,8 @@ En `backend/config.php` agregar:
 
 ### Dependencias del worker
 ```bash
+npm install
+# o bien:
 npm install playwright
 ```
 
