@@ -146,11 +146,13 @@ En `backend/config.php` agregar:
 - `ojv_node_bin` (por defecto `node`)
 
 ### Dependencias del worker
+Ejecuta los comandos desde la **raíz del proyecto** (misma carpeta de `package.json`):
 ```bash
 npm install
-# o bien:
-npm install playwright
+npm run ojv:install-browser
 ```
+
+Si tu editor no muestra el botón rápido **Run NPM Install**, igualmente funciona por terminal; ese botón solo aparece cuando el editor detecta la carpeta correcta con `package.json` abierta.
 
 ### Nota importante
 El worker viene con estructura base y debe ajustar selectores reales de login/consulta de OJV según cambios del portal y políticas de uso vigentes.
